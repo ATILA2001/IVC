@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    steps:
+      # IVC.csproj linkea ..\Auth.Web\Security\SharedCookieTicketDto.cs: hace falta
+      # el repo Auth.Web al lado, igual que en el escritorio.
+      - uses: actions/checkout@v4
+        with:
+          path: IVC
+      - uses: actions/checkout@v4
+        with:
+          repository: ATILA2001/Auth.Web
+          ref: dev
+          path: Auth.Web
+          token: ${{ secrets.AUTH_WEB_READ_TOKEN }}
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore IVC/IVC.sln
+
+      - name: Build
+        run: dotnet build IVC/IVC.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test IVC/Tests/Tests.csproj --configuration Release --no-build --verbosity normal

@@ -1,0 +1,226 @@
+/* IVC — Estilos propios: layout de la aplicación, estados de validación y
+   clases utilitarias. Los tokens de color viven en tokens.css y los overrides
+   visuales del tema Radzen en radzen-overrides.css. */
+
+/* ===========================================================================
+   Título de página y estados de validación
+   =========================================================================== */
+h1 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+/* FocusOnNavigate enfoca el h1 al navegar: el foco es programático, sin anillo. */
+h1:focus {
+    outline: none;
+}
+
+.valid.modified:not([type=checkbox]) {
+    outline: 1px solid var(--ivc-valid) !important;
+    outline-offset: -1px;
+    border-color: var(--ivc-valid) !important;
+}
+
+.invalid {
+    outline: 1px solid var(--ivc-invalid) !important;
+    outline-offset: -1px;
+    border-color: var(--ivc-invalid) !important;
+}
+
+/* ===========================================================================
+   Helpers de layout: la app ocupa la altura del viewport sin depender de vh.
+   El layout de Radzen y el body actúan como columna flex para que la grid
+   ocupe el espacio restante y muestre su propio scroll interno, evitando que
+   scrollee toda la página. (Usa clases .rz-* a propósito: es el sistema de
+   layout de la app montado sobre la estructura de Radzen, no un ajuste
+   visual del tema.)
+   =========================================================================== */
+html, body, #app {
+    height: 100%;
+}
+
+.rz-layout {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.rz-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    /* Compacto en vertical: cada rem de padding es una fila menos en la grilla. */
+    padding: 0.5rem 1rem;
+}
+
+/* El RadzenStack que envuelve una página con grid ocupa todo el alto restante del
+   body (sólo cuando contiene un grid directo, para no afectar formularios/dashboard). */
+.rz-body > .rz-stack:has(> .rz-data-grid, > .ivc-tabs-grilla) {
+    flex: 1 1 0;
+    min-height: 0;
+    gap: 0.5rem; /* menos aire entre la toolbar y la grilla */
+}
+
+.rz-body .rz-data-grid {
+    display: flex;
+    flex-direction: column;
+    /* Ocupa el alto restante (no un % que incluye título/toolbar). Por muchas filas
+       que haya, el grid nunca supera la pantalla y scrollea internamente. */
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+.rz-body .rz-data-grid .rz-data-grid-data {
+    /* Área de datos: toma el alto disponible del grid y scrollea en ambos ejes. */
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: auto;
+}
+
+/* Grillas dentro de pestañas (Control OP). La regla de arriba le da al grid
+   "el alto restante" (flex 1 1 0), pero eso exige que la cadena de contenedores
+   flex llegue sin cortes desde .rz-body; el RadzenTabs la corta (sus paneles son
+   bloques de alto automático) y el grid colapsaba a 2 px: las filas estaban en el
+   DOM y salían en el export, pero no se veían. Acá se extiende la cadena a través
+   del tabview hasta el stack que envuelve a cada grid (el stack raíz ya lo cubre
+   la regla de arriba). El panel no activo lo oculta Radzen con display:none
+   inline, que gana a este display:flex. */
+.ivc-tabs-grilla {
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+.ivc-tabs-grilla > .rz-tabview-panels {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden; /* el scroll es del área de datos del grid, no del panel */
+}
+
+.ivc-tabs-grilla > .rz-tabview-panels > .rz-tabview-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+.ivc-tabs-grilla > .rz-tabview-panels > .rz-tabview-panel > .rz-stack {
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+/* La tabla nunca es más angosta que el contenedor; para el scroll horizontal
+   alcanza con table-layout fixed de Radzen: la tabla crece sola a la suma de
+   los anchos declarados. OJO: no usar width max-content acá — infla la tabla
+   al ancho del contenido y las columnas con textos largos (Empresa) quedan más
+   anchas que su Width declarado, corriéndose de los offsets sticky de las
+   columnas fijas (el contenido y el ícono de filtro asomaban sueltos después
+   del bloque fijo). */
+.rz-data-grid .rz-grid-table {
+    width: 100%;
+    min-width: 100%;
+}
+
+/* Encabezado fijo al hacer scroll vertical, para no perder los títulos de columna. */
+.rz-data-grid .rz-grid-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: var(--rz-grid-header-background-color, var(--rz-base-background-color, #fff));
+}
+
+/* Barra de scroll más visible y cómoda para navegar muchos datos. */
+.rz-body .rz-data-grid .rz-data-grid-data {
+    scrollbar-width: thin;
+}
+
+    .rz-body .rz-data-grid .rz-data-grid-data::-webkit-scrollbar {
+        width: 12px;
+        height: 12px;
+    }
+
+    .rz-body .rz-data-grid .rz-data-grid-data::-webkit-scrollbar-thumb {
+        background-color: rgba(128, 128, 128, 0.55);
+        border-radius: 6px;
+        border: 2px solid transparent;
+        background-clip: content-box;
+    }
+
+        .rz-body .rz-data-grid .rz-data-grid-data::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(128, 128, 128, 0.8);
+        }
+
+/* ===========================================================================
+   Badges interactivos y tablas de detalle (diálogos de líneas/OPs)
+   =========================================================================== */
+/* Botón invisible alrededor de un badge clickeable: le da al badge semántica de
+   botón (teclado y lector de pantalla) sin cambiar cómo se ve. */
+.ivc-boton-badge {
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+/* Badge chico para usar dentro de celdas y tooltips sin agrandar la fila. */
+.ivc-badge-compacto {
+    --rz-badge-font-size: 0.65rem;
+    --rz-badge-padding: 0.05rem 0.35rem;
+}
+
+/* Diálogos de edición con panel de identidad: el contenido va de borde a borde
+   (el panel verde ocupa la columna izquierda completa); el componente pone sus
+   propios paddings, encabezado y botonera. */
+.ivc-dialog-panel .rz-dialog-content {
+    padding: 0 !important;
+}
+
+/* Tabla simple de los diálogos de detalle (líneas del devengado, OPs CAF). */
+.ivc-tabla-detalle {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.ivc-tabla-detalle th,
+.ivc-tabla-detalle td {
+    text-align: left;
+    padding: 0.25rem 1rem 0.25rem 0;
+    white-space: nowrap;
+}
+
+.ivc-tabla-detalle th {
+    border-bottom: 1px solid var(--surface-border, rgba(128, 128, 128, .35));
+}
+
+/* ===========================================================================
+   Control OP: tarjetas de candidatas del diálogo Buscar OP
+   =========================================================================== */
+.ivc-candidata {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 14px;
+    border: 1px solid var(--surface-border, rgba(128,128,128,.25));
+    border-radius: 8px;
+    background: var(--rz-base-background-color, #fff);
+}
+
+/* La mejor coincidencia se distingue del resto por borde y fondo, no solo por texto. */
+.ivc-candidata--mejor {
+    border: 2px solid var(--rz-primary);
+    background: var(--ivc-tooltip-detalle-bg);
+}
+
+.ivc-candidata__mejor {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--rz-primary);
+}

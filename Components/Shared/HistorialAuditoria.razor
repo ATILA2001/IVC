@@ -1,0 +1,86 @@
+@using IVC.Data.Entities
+@inject IVC.Services.Abstractions.IAuditoriaService Auditoria
+
+@if (_cargando)
+{
+    <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+}
+else if (_fallo)
+{
+    <RadzenText TextStyle="TextStyle.Body1">
+        No se pudo cargar el historial. Cerrá el diálogo y volvé a intentar.
+    </RadzenText>
+}
+else if (_grupos.Count == 0)
+{
+    <RadzenText TextStyle="TextStyle.Body1">Sin cambios registrados para esta fila.</RadzenText>
+}
+else
+{
+    <RadzenStack Gap="1rem">
+        @foreach (var grupo in _grupos)
+        {
+            <div>
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" AlignItems="AlignItems.Center">
+                    <strong>@grupo.Fecha.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</strong>
+                    <span>·</span>
+                    <span>@grupo.Usuario</span>
+                    <RadzenBadge BadgeStyle="@EstiloAccion(grupo.Accion)" Text="@grupo.Accion"
+                                 class="ivc-badge-compacto" />
+                </RadzenStack>
+                <ul class="rz-mt-1 rz-mb-0">
+                    @foreach (var c in grupo.Cambios)
+                    {
+                        <li>
+                            <strong>@c.Campo:</strong>
+                            @(c.ValorAnterior ?? "(vacío)") <span>→</span> @(c.ValorNuevo ?? "(vacío)")
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    </RadzenStack>
+}
+
+@code {
+    [Parameter] public string Vista { get; set; } = string.Empty;
+    [Parameter] public int? EntidadId { get; set; }
+    [Parameter] public string ClaveNegocio { get; set; } = string.Empty;
+
+    private bool _cargando = true;
+    private bool _fallo;
+    private List<Grupo> _grupos = new();
+
+    private sealed record Grupo(DateTime Fecha, string Usuario, string Accion, List<CambioAuditoria> Cambios);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var filas = await Auditoria.GetHistorialAsync(Vista, EntidadId, ClaveNegocio);
+
+            // Un grupo por guardado (lote), del más reciente al más viejo.
+            _grupos = filas
+                .GroupBy(f => f.Lote)
+                .Select(g => new Grupo(g.First().Fecha, g.First().Usuario, g.First().Accion, g.ToList()))
+                .OrderByDescending(g => g.Fecha)
+                .ToList();
+        }
+        catch
+        {
+            // Una falla acá no puede voltear el circuito: el diálogo muestra el error.
+            _fallo = true;
+        }
+        finally
+        {
+            _cargando = false;
+        }
+    }
+
+    private static BadgeStyle EstiloAccion(string accion) => accion switch
+    {
+        "Alta" => BadgeStyle.Success,
+        "Baja" => BadgeStyle.Danger,
+        _ => BadgeStyle.Info,
+    };
+}

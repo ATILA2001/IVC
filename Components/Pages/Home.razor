@@ -1,0 +1,111 @@
+@page "/home"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using IVC.Security
+@using IVC.Services.Abstractions
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IPermissionService PermissionService
+
+<PageTitle>IVC — Instituto de la Vivienda</PageTitle>
+
+<section class="ivc-home">
+    <div class="ivc-home__header">
+        <span class="ivc-home__eyebrow">IVC</span>
+        <h1>Instituto de la Vivienda</h1>
+        <p>Seleccioná una sección disponible para comenzar.</p>
+    </div>
+
+    @if (VisiblePages.Count == 0)
+    {
+        <div class="ivc-home__empty">
+            No tenés páginas disponibles para esta aplicación.
+        </div>
+    }
+    else
+    {
+        <div class="ivc-home__grid">
+            @foreach (var link in VisiblePages)
+            {
+                <a class="ivc-home__tile" href="@link.Url">
+                    <span class="rzi">@link.Icono</span>
+                    <strong>@link.Titulo</strong>
+                    <small>@link.Descripcion</small>
+                </a>
+            }
+        </div>
+    }
+</section>
+
+<style>
+    .ivc-home {
+        max-width: 1120px;
+        padding: 2rem 1rem;
+    }
+
+    .ivc-home__header {
+        margin-bottom: 1.5rem;
+    }
+
+    .ivc-home__eyebrow {
+        color: var(--menu-active-color, var(--custom-primary-accent));
+        font-size: .85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .ivc-home h1 {
+        margin: .35rem 0 .5rem;
+    }
+
+    .ivc-home__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+    }
+
+    .ivc-home__tile {
+        display: grid;
+        gap: .45rem;
+        padding: 1rem;
+        min-height: 140px;
+        color: inherit;
+        text-decoration: none;
+        border: 1px solid var(--surface-border, rgba(255, 255, 255, .12));
+        border-radius: 6px;
+        background: var(--surface-bg, rgba(255, 255, 255, .04));
+    }
+
+    .ivc-home__tile:hover {
+        border-color: var(--menu-active-color, var(--custom-primary-accent));
+    }
+
+    .ivc-home__tile .rzi {
+        font-size: 1.75rem;
+        color: var(--menu-active-color, var(--custom-primary-accent));
+    }
+
+    .ivc-home__tile small,
+    .ivc-home__empty {
+        color: var(--rz-text-secondary-color);
+    }
+
+    .ivc-home__empty {
+        padding: 1rem;
+        border: 1px solid var(--surface-border, rgba(255, 255, 255, .12));
+        border-radius: 6px;
+        background: var(--surface-bg, rgba(255, 255, 255, .04));
+    }
+</style>
+
+@code {
+    private IReadOnlyList<PaginasIvc.Pagina> VisiblePages { get; set; } = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await AuthStateProvider.GetAuthenticationStateAsync()).User;
+        VisiblePages = AdminClaims.IsAdmin(user)
+            ? PaginasIvc.Todas
+            : PaginasIvc.Todas.Where(page => PermissionService.CanAccess(user, page.Url)).ToArray();
+    }
+}

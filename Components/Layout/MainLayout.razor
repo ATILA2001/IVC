@@ -1,0 +1,52 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+<RadzenComponents @rendermode="InteractiveServer" />
+
+<RadzenLayout>
+    <RadzenHeader>
+        <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="Radzen.AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+            <RadzenSidebarToggle Click="@(() => sidebarExpanded = !sidebarExpanded)" />
+
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" JustifyContent="JustifyContent.Right">
+                <AuthorizeView>
+                    <Authorized>
+                        <RadzenLabel Text="@context.User.Identity?.Name" />
+                    </Authorized>
+                </AuthorizeView>
+                @if (_otherApps.Count > 0)
+                {
+                    @* RadzenMenu y no un dropdown casero: apertura/cierre (clic afuera,
+                       Escape), navegación por teclado y estados ARIA vienen resueltos.
+                       Los ítems renderizan como links reales al switch-app de Auth.Web
+                       (origen externo: navegación completa, sin router de Blazor). *@
+                    <RadzenMenu>
+                        <RadzenMenuItem Text="Aplicaciones" Icon="grid_view">
+                            @foreach (var app in _otherApps)
+                            {
+                                <RadzenMenuItem Text="@app.Label" Path="@app.Url" />
+                            }
+                        </RadzenMenuItem>
+                    </RadzenMenu>
+                }
+                <RadzenAppearanceToggle />
+                <RadzenButton Icon="logout"
+                              Text="Salir"
+                              ButtonStyle="ButtonStyle.Danger"
+                              Click="@(() => Navigation.NavigateTo("/Account/Logout", forceLoad: true))" />
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenHeader>
+    <RadzenSidebar Responsive="false" Style="width: max-content">
+        <RadzenPanelMenu DisplayStyle="@(sidebarExpanded? Radzen.MenuItemDisplayStyle.IconAndText : Radzen.MenuItemDisplayStyle.Icon)" ShowArrow="false">
+            <RadzenPanelMenuItem Text="Inicio" Icon="home" Path="/home" />
+            @* Una sola lista de páginas (PaginasIvc) para el menú y la página de inicio. *@
+            @foreach (var pagina in PaginasIvc.Todas.Where(p => CanShowPage(p.Url)))
+            {
+                <RadzenPanelMenuItem Text="@pagina.Titulo" Icon="@pagina.Icono" Path="@pagina.Url" />
+            }
+        </RadzenPanelMenu>
+    </RadzenSidebar>
+    <RadzenBody>
+        @Body
+    </RadzenBody>
+</RadzenLayout>

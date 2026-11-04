@@ -1,0 +1,15 @@
+@* Estado de carga con contexto: spinner centrado en el área que va a ocupar la
+   grilla, con texto de qué se está cargando. Un spinner suelto arriba a la
+   izquierda no dice nada, y reservar alto evita el salto de layout al llegar
+   los datos. *@
+
+<RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Gap="0.75rem"
+             Style="min-height: 40vh;">
+    <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    @* Gris de texto secundario, no rz-color-secondary (el SECONDARY del tema es magenta en claro). *@
+    <RadzenText TextStyle="TextStyle.Body1" Style="margin: 0; color: var(--rz-text-secondary-color);">@Texto</RadzenText>
+</RadzenStack>
+
+@code {
+    [Parameter, EditorRequired] public string Texto { get; set; } = "Cargando…";
+}
