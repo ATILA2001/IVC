@@ -26,7 +26,8 @@ Components/                  # UI Blazor (.razor + code-behind .razor.cs)
 └─ PaginasIvc.cs             # Catálogo de páginas (URL = la registrada en Auth.Web)
 
 Data/                        # EF Core
-├─ Entities/                 # Entidades mapeadas a las tablas existentes de IVC
+├─ Entities/                 # Entidades mapeadas a las tablas existentes de IVC (una clase por tabla)
+├─ Configurations/           # Fluent API por módulo: tabla, columnas, precisión, claves, navegaciones
 ├─ IvcDbContext.cs           # Base IVC (lectura y escritura). SIN migraciones: esquema preexistente
 └─ DataProtectionDbContext.cs# Apunta a la base de Auth.Web (key ring compartido)
 
@@ -44,12 +45,23 @@ Tests/                       # MSTest + bUnit (Application, Components, Services
 - **Capas:** `Components` → `Services` → `Repositories` → `Data`. Los `Services` devuelven DTOs de `Application/<Feature>/Dtos/`; nunca exponen tipos de UI hacia abajo.
 - **Code-behind:** cada página es `Pagina.razor` + `Pagina.razor.cs` (`partial class`).
 - **DI:** registro explícito en `Extensions/IvcBuilderExtensions.cs` (repos `Transient`, services `Scoped`). Los repositorios crean su propio `IvcDbContext` por operación con `IDbContextFactory`.
-- **Base de datos:** el esquema IVC es preexistente y lo comparten el legado, SAF y Power BI. `IvcDbContext` no genera migraciones; las tablas nuevas de la app se crean con scripts numerados en `Database/` (ejecutar primero en `IVC_TEST`).
+- **Base de datos:** el esquema IVC es preexistente y lo comparten el legado, SAF y Power BI. `IvcDbContext` no genera migraciones; las tablas nuevas de la app se crean con scripts numerados en `Database/` (ejecutar primero en `IVC_TEST`). Los nombres de tabla y columna se declaran explícitos en `Data/Configurations/`; `Database/esquema-columnas.sql` lista el esquema real para compararlo con el mapeo. Las bajadas externas (`PASES_SADE`, `GEDO`, `DEVENGADOS`) se mapean sin clave y sólo lectura. Autorizantes, Certificados y Redeterminaciones se vinculan por `CODIGO_AUTORIZANTE`, que no es clave primaria: esa relación se resuelve en los servicios, no como navegación.
 - **Páginas:** la URL de cada página se declara una sola vez en `Components/PaginasIvc.cs` y es la misma que se registra en `Auth.Web` para los permisos.
 - **Auditoría:** toda alta/edición/baja manual queda registrada en `CambiosAuditoria` (quién, cuándo, campo, valor anterior y nuevo).
 - **Cultura:** `es-AR` fija (coma decimal, `dd/MM/yyyy`).
 - **Inglés** para nombres de capas/carpetas; el dominio funcional va en español.
 - **Commits:** Conventional Commits (`feat`, `fix`, `refactor`, `docs`, `chore`). Ramas: `dev` integración, `main` producción, `feature/*`, `fix/*`, `hotfix/*`.
+
+### Diferencias deliberadas con SAF
+
+SAF es la plantilla, pero IVC se aparta en cuatro puntos. Se mantienen a propósito (decisión del 09/11/2026):
+
+1. **`Data/Configurations/` con `IEntityTypeConfiguration`.** SAF, SAI y Auth.Web escriben el Fluent API dentro del `OnModelCreating` del contexto. IVC mapea 27 tablas preexistentes con nombres de columna explícitos, y el contexto quedaría ilegible: el mapeo va en un archivo por módulo y el contexto lo aplica con `ApplyConfigurationsFromAssembly`.
+2. **`Components/PaginasIvc.cs`.** SAF repite la lista de páginas en `MainLayout.razor` y en `Home.razor`. IVC la declara una sola vez (URL, título, descripción, ícono) y el menú y el inicio la consumen; la URL es la misma que se registra en Auth.Web.
+3. **Tests de integración opcionales** (`TestCategory=Integracion`). Leen la base real sólo si existe `IVC_TEST_CONNECTION`; sin la variable quedan `Inconclusive`. SAF no tiene tests contra base.
+4. **Cultura `es-AR` fija** con `RequestLocalization`. SAF sólo fija la cultura dentro de `AuditoriaDiff`; IVC parsea y muestra montos con coma decimal en toda la app.
+
+Además, por decisión de la fase 0: un solo `IvcDbContext` database-first sin migraciones (SAF tiene base propia con migraciones), tablas nuevas por scripts en `Database/`, y CI en GitHub Actions.
 
 ## 4) Requisitos y ejecución
 
@@ -72,6 +84,12 @@ dotnet user-secrets set "AuthWeb:ClientId" "..."
 dotnet build IVC.sln
 dotnet test Tests/Tests.csproj
 dotnet run
+```
+
+Los tests de la categoría `Integracion` leen una fila de cada tabla contra una base IVC real para validar el mapeo. Corren sólo si existe la variable de entorno `IVC_TEST_CONNECTION` (apuntar siempre a `IVC_TEST`); sin ella quedan `Inconclusive` y el CI no los necesita:
+
+```powershell
+$env:IVC_TEST_CONNECTION = "<cadena a IVC_TEST>"; dotnet test Tests/Tests.csproj --filter "TestCategory=Integracion"
 ```
 
 Antes del primer arranque contra una base, ejecutar `Database/001_CambiosAuditoria.sql`. La app redirige al login de `Auth.Web` si el usuario no está autenticado. `/healthz` responde el estado de la conexión a IVC (anónimo).
