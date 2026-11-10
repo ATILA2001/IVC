@@ -1,0 +1,105 @@
+@page "/lineas-gestion-ff"
+@using IVC.Application.Catalogos
+@using IVC.Application.Catalogos.Dtos
+@using IVC.Application.Common
+@inherits IVC.Components.GridPageBase<IVC.Application.Catalogos.Dtos.LineaGestionFFViewModel>
+
+<PageTitle>Líneas de gestión FF — IVC</PageTitle>
+
+<RadzenStack>
+    <GridToolbar Titulo="Líneas de gestión FF"
+                 OnBuscar="@OnBusquedaChanged"
+                 TextoBusqueda="@_textoBusqueda"
+                 PlaceholderBusqueda="Buscar línea, nombre FF o fuente…"
+                 LimpiarFiltrosDeshabilitado="@(!HayFiltrosActivos)"
+                 MostrarNuevo="@CanCreate"
+                 NuevoDeshabilitado="@(_loading || _lineas.Count == 0)"
+                 OnNuevo="@AddRow"
+                 Exportando="@_exportando"
+                 ExportarDeshabilitado="@ExportarDeshabilitado"
+                 TituloExportarDeshabilitado="@MotivoExportarDeshabilitado"
+                 OnExportar="@ExportarExcel"
+                 OnLimpiarFiltros="@LimpiarFiltros" />
+
+    @if (_loading)
+    {
+        <EstadoCarga Texto="@($"Cargando {TituloEntidad}…")" />
+    }
+    else
+    {
+        <RadzenDataGrid @ref="_grid"
+                        Data="@ItemsVisibles"
+                        TItem="LineaGestionFFViewModel"
+                        Filter="@OnGridFilter"
+                        FilterCleared="@OnGridFilter"
+                        SettingsChanged="@GuardarSettingsGrilla"
+                        LoadSettings="@CargarSettingsGrilla"
+                        AllowFiltering="true"
+                        AllowSorting="true"
+                        AllowColumnResize="true"
+                        FilterMode="FilterMode.CheckBoxList"
+                        ClearFilterText="@GridTextos.LimpiarFiltro"
+                        ApplyFilterText="@GridTextos.AplicarFiltro"
+                        EmptyText="@GridTextos.Vacio"
+                        AllowPaging="false"
+                        EditMode="DataGridEditMode.Single"
+                        RowEdit="@OnRowEdit"
+                        RowUpdate="@OnRowUpdate"
+                        RowCreate="@OnRowCreate">
+            <Columns>
+                <RadzenDataGridColumn TItem="LineaGestionFFViewModel" Property="LineaGestionNombre" Title="Línea de gestión" Width="260px">
+                    <EditTemplate Context="item">
+                        <RadzenDropDown TValue="int"
+                                        @bind-Value="Buffer(item).LineaGestionId"
+                                        Data="@_lineas"
+                                        TextProperty="@nameof(OpcionLookup.Nombre)"
+                                        ValueProperty="@nameof(OpcionLookup.Id)"
+                                        AllowFiltering="true"
+                                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                        Placeholder="Elegí la línea…"
+                                        aria-label="Línea de gestión"
+                                        class="@GetValidationCssClass(Buffer(item).LineaGestionId > 0)"
+                                        Style="width:100%" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="LineaGestionFFViewModel" Property="Nombre" Title="Nombre FF">
+                    <EditTemplate Context="item">
+                        <RadzenTextBox @bind-Value="Buffer(item).Nombre" MaxLength="@LineaGestionFFValidator.TextoMaxLength"
+                                       aria-label="Nombre FF"
+                                       class="@GetValidationCssClass(!string.IsNullOrWhiteSpace(Buffer(item).Nombre))"
+                                       Style="width:100%" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="LineaGestionFFViewModel" Property="Fuente" Title="Fuente">
+                    <EditTemplate Context="item">
+                        <RadzenTextBox @bind-Value="Buffer(item).Fuente" MaxLength="@LineaGestionFFValidator.TextoMaxLength" aria-label="Fuente" Style="width:100%" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                @* Datos de la línea, de sólo lectura (contexto, como en la grilla del legado). *@
+                <RadzenDataGridColumn TItem="LineaGestionFFViewModel" Property="Tipo" Title="Tipo" />
+                <RadzenDataGridColumn TItem="LineaGestionFFViewModel" Property="Grupo" Title="Grupo" />
+                <RadzenDataGridColumn TItem="LineaGestionFFViewModel" Property="Reparticion" Title="Repartición" />
+                @if (CanEdit || CanDelete || CanCreate)
+                {
+                    <RadzenDataGridColumn TItem="LineaGestionFFViewModel" Title="Acciones" Width="150px" Frozen="true" FrozenPosition="FrozenColumnPosition.Right" Filterable="false" Sortable="false">
+                        <Template Context="item">
+                            <AccionesFila MostrarEditar="@CanEdit"
+                                          MostrarEliminar="@CanDelete"
+                                          OnEditar="@(() => _grid.EditRow(item))"
+                                          OnEliminar="@(() => DeleteRow(item))"
+                                          OnHistorial="@(() => VerHistorial(item))" />
+                        </Template>
+                        <EditTemplate Context="item">
+                            <AccionesFila Edicion="true"
+                                          OnGuardar="@(() => GuardarFila(item))"
+                                          OnCancelar="@(() => CancelEdit(item))" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                }
+            </Columns>
+            <FooterTemplate>
+                <GridFooterTotales Filas="@(_grid?.View?.Count() ?? 0)" TotalFilas="@_items.Count" />
+            </FooterTemplate>
+        </RadzenDataGrid>
+    }
+</RadzenStack>

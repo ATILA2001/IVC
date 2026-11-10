@@ -2,7 +2,7 @@
 namespace IVC.Data.Entities;
 
 /// <summary>Barrio de la obra. Tabla Barrios.</summary>
-public class Barrio
+public class Barrio : ICatalogoSimple
 {
     public int Id { get; set; }
     public string? Nombre { get; set; }

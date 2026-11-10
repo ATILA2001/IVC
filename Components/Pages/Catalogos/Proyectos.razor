@@ -1,0 +1,142 @@
+@page "/proyectos"
+@using IVC.Application.Catalogos
+@using IVC.Application.Catalogos.Dtos
+@using IVC.Application.Common
+@inherits IVC.Components.GridPageBase<IVC.Application.Catalogos.Dtos.ProyectoViewModel>
+
+<PageTitle>Proyectos — IVC</PageTitle>
+
+<RadzenStack>
+    <GridToolbar Titulo="Proyectos"
+                 SizeTitulo="3"
+                 SizeAcciones="9"
+                 OnBuscar="@OnBusquedaChanged"
+                 TextoBusqueda="@_textoBusqueda"
+                 PlaceholderBusqueda="Buscar proyecto, obra, área, contrata o línea…"
+                 LimpiarFiltrosDeshabilitado="@(!HayFiltrosActivos)"
+                 MostrarNuevo="@CanCreate"
+                 NuevoDeshabilitado="@(_loading || _obrasSinProyecto.Count == 0)"
+                 OnNuevo="@AddRow"
+                 Exportando="@_exportando"
+                 ExportarDeshabilitado="@ExportarDeshabilitado"
+                 TituloExportarDeshabilitado="@MotivoExportarDeshabilitado"
+                 OnExportar="@ExportarExcel"
+                 OnLimpiarFiltros="@LimpiarFiltros" />
+
+    @if (_loading)
+    {
+        <EstadoCarga Texto="@($"Cargando {TituloEntidad}…")" />
+    }
+    else
+    {
+        @* Virtualización en lugar de paginado: scroll continuo renderizando sólo las
+           filas visibles. Requiere el alto fijo del Style. *@
+        <RadzenDataGrid @ref="_grid"
+                        Data="@ItemsVisibles"
+                        TItem="ProyectoViewModel"
+                        Filter="@OnGridFilter"
+                        FilterCleared="@OnGridFilter"
+                        SettingsChanged="@GuardarSettingsGrilla"
+                        LoadSettings="@CargarSettingsGrilla"
+                        AllowFiltering="true"
+                        AllowSorting="true"
+                        AllowColumnResize="true"
+                        FilterMode="FilterMode.CheckBoxList"
+                        ClearFilterText="@GridTextos.LimpiarFiltro"
+                        ApplyFilterText="@GridTextos.AplicarFiltro"
+                        EmptyText="@GridTextos.Vacio"
+                        AllowPaging="false"
+                        AllowVirtualization="true"
+                        Style="height: calc(100vh - 15rem)"
+                        EditMode="DataGridEditMode.Single"
+                        RowEdit="@OnRowEdit"
+                        RowUpdate="@OnRowUpdate"
+                        RowCreate="@OnRowCreate">
+            <Columns>
+                <RadzenDataGridColumn TItem="ProyectoViewModel" Property="Area" Title="Área" Width="140px" />
+                <RadzenDataGridColumn TItem="ProyectoViewModel" Property="Contrata" Title="Contrata" Width="160px" />
+                <RadzenDataGridColumn TItem="ProyectoViewModel" Property="Obra" Title="Obra" Width="300px" Frozen="true">
+                    <EditTemplate Context="item">
+                        @if (item.Id == 0)
+                        {
+                            @* La obra se elige sólo en el alta, entre las que todavía no tienen proyecto. *@
+                            <RadzenDropDown TValue="int"
+                                            @bind-Value="Buffer(item).ObraId"
+                                            Data="@_obrasSinProyecto"
+                                            TextProperty="@nameof(OpcionLookup.Nombre)"
+                                            ValueProperty="@nameof(OpcionLookup.Id)"
+                                            AllowFiltering="true"
+                                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                            Placeholder="Elegí la obra…"
+                                            aria-label="Obra"
+                                            class="@GetValidationCssClass(Buffer(item).ObraId > 0)"
+                                            Style="width:100%" />
+                        }
+                        else
+                        {
+                            @item.Obra
+                        }
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ProyectoViewModel" Property="Empresa" Title="Empresa" Width="180px" />
+                <RadzenDataGridColumn TItem="ProyectoViewModel" Property="Nombre" Title="Proyecto" Width="220px">
+                    <EditTemplate Context="item">
+                        <RadzenTextBox @bind-Value="Buffer(item).Nombre" MaxLength="@ProyectoValidator.TextoMaxLength"
+                                       aria-label="Proyecto"
+                                       class="@GetValidationCssClass(!string.IsNullOrWhiteSpace(Buffer(item).Nombre))"
+                                       Style="width:100%" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ProyectoViewModel" Property="SubProyecto" Title="SubProyecto" Width="220px">
+                    <EditTemplate Context="item">
+                        <RadzenTextBox @bind-Value="Buffer(item).SubProyecto" MaxLength="@ProyectoValidator.TextoMaxLength" aria-label="SubProyecto" Style="width:100%" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ProyectoViewModel" Property="LineaGestionNombre" Title="Línea de gestión" Width="220px">
+                    <EditTemplate Context="item">
+                        <RadzenDropDown TValue="int?"
+                                        @bind-Value="Buffer(item).LineaGestionId"
+                                        Data="@_lineas"
+                                        TextProperty="@nameof(OpcionLookup.Nombre)"
+                                        ValueProperty="@nameof(OpcionLookup.Id)"
+                                        AllowFiltering="true"
+                                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                        Placeholder="Elegí la línea…"
+                                        aria-label="Línea de gestión"
+                                        class="@GetValidationCssClass(Buffer(item).LineaGestionId is > 0)"
+                                        Style="width:100%" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ProyectoViewModel" Property="Autorizado2025" Title="Autorizado 2025" Width="150px" FormatString="{0:N2}" TextAlign="TextAlign.Right" />
+                <RadzenDataGridColumn TItem="ProyectoViewModel" Property="Autorizado2026" Title="Autorizado 2026" Width="150px" FormatString="{0:N2}" TextAlign="TextAlign.Right">
+                    <EditTemplate Context="item">
+                        <RadzenNumeric TValue="decimal?" @bind-Value="Buffer(item).Autorizado2026" Format="N2" Min="0"
+                                       aria-label="Autorizado 2026"
+                                       class="@GetValidationCssClass(Buffer(item).Autorizado2026 is >= 0)"
+                                       Style="width:100%" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                @if (CanEdit || CanDelete || CanCreate)
+                {
+                    <RadzenDataGridColumn TItem="ProyectoViewModel" Title="Acciones" Width="150px" Frozen="true" FrozenPosition="FrozenColumnPosition.Right" Filterable="false" Sortable="false">
+                        <Template Context="item">
+                            <AccionesFila MostrarEditar="@CanEdit"
+                                          MostrarEliminar="@CanDelete"
+                                          OnEditar="@(() => _grid.EditRow(item))"
+                                          OnEliminar="@(() => DeleteRow(item))"
+                                          OnHistorial="@(() => VerHistorial(item))" />
+                        </Template>
+                        <EditTemplate Context="item">
+                            <AccionesFila Edicion="true"
+                                          OnGuardar="@(() => GuardarFila(item))"
+                                          OnCancelar="@(() => CancelEdit(item))" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                }
+            </Columns>
+            <FooterTemplate>
+                <GridFooterTotales Filas="@(_grid?.View?.Count() ?? 0)" TotalFilas="@_items.Count" />
+            </FooterTemplate>
+        </RadzenDataGrid>
+    }
+</RadzenStack>
