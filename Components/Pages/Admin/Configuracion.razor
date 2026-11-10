@@ -63,8 +63,11 @@
                     }
                     else
                     {
+                        @* ivc-grilla-embebida: dentro de una tarjeta no hay "alto restante" que
+                           ocupar (ver app.css); sin la clase, la grilla colapsa a cero. *@
                         <RadzenDataGrid TItem="UsuarioVinculadoViewModel"
                                         Data="@_usuarios"
+                                        class="ivc-grilla-embebida"
                                         AllowSorting="true"
                                         AllowFiltering="true"
                                         FilterMode="FilterMode.Simple"
