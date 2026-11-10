@@ -15,6 +15,7 @@ Misma metodología de capas que `SAF` y `Auth.Web`.
 ```
 Application/                 # Reglas puras y DTOs por feature (sin EF ni UI; 100 % testeable)
 ├─ Common/                   # Diff de auditoría, atributos Export/Audit/Restore, validaciones
+├─ Identidad/                # UsuarioIvc, EstadoPlanificacion, IvcAreaIds y ReglasPermisosIvc (ex UserHelper)
 
 Components/                  # UI Blazor (.razor + code-behind .razor.cs)
 ├─ Account/                  # Login / AccessDenied (delegan en Auth.Web)
@@ -47,6 +48,7 @@ Tests/                       # MSTest + bUnit (Application, Components, Services
 - **DI:** registro explícito en `Extensions/IvcBuilderExtensions.cs` (repos `Transient`, services `Scoped`). Los repositorios crean su propio `IvcDbContext` por operación con `IDbContextFactory`.
 - **Base de datos:** el esquema IVC es preexistente y lo comparten el legado, SAF y Power BI. `IvcDbContext` no genera migraciones; las tablas nuevas de la app se crean con scripts numerados en `Database/` (ejecutar primero en `IVC_TEST`). Los nombres de tabla y columna se declaran explícitos en `Data/Configurations/`; `Database/esquema-columnas.sql` lista el esquema real para compararlo con el mapeo. Las bajadas externas (`PASES_SADE`, `GEDO`, `DEVENGADOS`) se mapean sin clave y sólo lectura. Autorizantes, Certificados y Redeterminaciones se vinculan por `CODIGO_AUTORIZANTE`, que no es clave primaria: esa relación se resuelve en los servicios, no como navegación.
 - **Páginas:** la URL de cada página se declara una sola vez en `Components/PaginasIvc.cs` y es la misma que se registra en `Auth.Web` para los permisos.
+- **Identidad y permisos:** `perms_json` decide a qué páginas entra el usuario (`PermissionPageBase`). Las reglas funcionales de edición que `perms_json` no expresa (rol, área, interruptores de `ABM_PLANI`) viven en `Application/Identidad/ReglasPermisosIvc` como funciones puras sobre un `UsuarioIvc`; `IUsuarioActual` construye ese usuario una vez por circuito desde los claims y la base (áreas por `AREAS.AuthAreaId`, alta y nombre en `UsuariosVinculados`) y `IPermisosIvc` evalúa las reglas con el estado vigente. Los campos inline de las grillas los edita cualquier usuario autenticado; con la planificación cerrada se bloquean sólo alta, ventana y baja (dictamen del área del 04/11/2026). Las reglas se verifican en cada handler que escribe, además de ocultar controles.
 - **Auditoría:** toda alta/edición/baja manual queda registrada en `CambiosAuditoria` (quién, cuándo, campo, valor anterior y nuevo).
 - **Cultura:** `es-AR` fija (coma decimal, `dd/MM/yyyy`).
 - **Inglés** para nombres de capas/carpetas; el dominio funcional va en español.
@@ -86,7 +88,7 @@ dotnet test Tests/Tests.csproj
 dotnet run
 ```
 
-Los tests de la categoría `Integracion` leen una fila de cada tabla contra una base IVC real para validar el mapeo. Corren sólo si existe la variable de entorno `IVC_TEST_CONNECTION` (apuntar siempre a `IVC_TEST`); sin ella quedan `Inconclusive` y el CI no los necesita:
+Los tests de la categoría `Integracion` leen una fila de cada tabla contra una base IVC real para validar el mapeo, y verifican los datos que las reglas de permisos dan por sentados (áreas 16 y 19 mapeadas a Auth.Web, una sola fila en `ABM_PLANI`, largo de `UsuariosVinculados.Nombre`). Corren sólo si existe la variable de entorno `IVC_TEST_CONNECTION` (apuntar siempre a `IVC_TEST`); sin ella quedan `Inconclusive` y el CI no los necesita:
 
 ```powershell
 $env:IVC_TEST_CONNECTION = "<cadena a IVC_TEST>"; dotnet test Tests/Tests.csproj --filter "TestCategory=Integracion"

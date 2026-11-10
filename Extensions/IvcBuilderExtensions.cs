@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Radzen;
 using IVC.Data;
+using IVC.Repositories.Abstractions;
+using IVC.Repositories.Implementations;
 using IVC.Security;
 using IVC.Services.Abstractions;
 using IVC.Services.Implementations;
@@ -126,8 +128,16 @@ public static class IvcBuilderExtensions
 
     public static WebApplicationBuilder AddApplicationServices(this WebApplicationBuilder builder)
     {
-        // Repositorios (Transient) y servicios de negocio (Scoped) se agregan por feature
-        // en las fases siguientes de la migración (ver Docs/migracion-net10.md del legado).
+        // Repositorios: Transient, cada uno crea su propio contexto por operación.
+        builder.Services.AddTransient<IAreaRepository, AreaRepository>();
+        builder.Services.AddTransient<IUsuarioVinculadoRepository, UsuarioVinculadoRepository>();
+        builder.Services.AddTransient<IAbmPlaniRepository, AbmPlaniRepository>();
+
+        // Identidad IVC: el usuario se construye una vez por circuito (reemplaza a Session["Usuario"]).
+        builder.Services.AddScoped<IUsuarioIvcFactory, UsuarioIvcFactory>();
+        builder.Services.AddScoped<IUsuarioActual, UsuarioActualService>();
+        builder.Services.AddScoped<IPermisosIvc, PermisosIvcService>();
+        builder.Services.AddScoped<IConfiguracionService, ConfiguracionService>();
 
         builder.Services.AddScoped<IExportService, ExportService>();
         builder.Services.AddScoped<IVC.Shared.INotificationHelper, IVC.Shared.NotificationHelper>();
