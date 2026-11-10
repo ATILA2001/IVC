@@ -16,12 +16,13 @@ Misma metodología de capas que `SAF` y `Auth.Web`.
 Application/                 # Reglas puras y DTOs por feature (sin EF ni UI; 100 % testeable)
 ├─ Common/                   # Diff de auditoría, atributos Export/Audit/Restore, validaciones
 ├─ Identidad/                # UsuarioIvc, EstadoPlanificacion, IvcAreaIds y ReglasPermisosIvc (ex UserHelper)
-└─ Catalogos/                # ViewModels y validadores de Barrios, Empresas, Líneas, Líneas FF, Proyectos y Movimientos
+├─ Catalogos/                # ViewModels y validadores de Barrios, Empresas, Líneas, Líneas FF, Proyectos y Movimientos
+└─ Obras/                    # ObraViewModel, ObraValidator e IndicadoresObra (fórmulas de CalculoObraNegocioEF)
 
 Components/                  # UI Blazor (.razor + code-behind .razor.cs)
 ├─ Account/                  # Login / AccessDenied (delegan en Auth.Web)
 ├─ Layout/                   # MainLayout: menú armado desde PaginasIvc + perms_json
-├─ Pages/                    # Páginas routables, una carpeta por feature (Admin, Catalogos, ...)
+├─ Pages/                    # Páginas routables, una carpeta por feature (Admin, Catalogos, Obras, ...)
 ├─ Shared/                   # Toolbar, pie de totales, historial de auditoría, etc.
 ├─ GridPageBase.cs           # Base de páginas con grilla (carga, edición, auditoría, export)
 ├─ PermissionPageBase.cs     # Base de páginas con control de permisos
@@ -52,6 +53,7 @@ Tests/                       # MSTest + bUnit (Application, Components, Reposito
 - **Identidad y permisos:** `perms_json` decide a qué páginas entra el usuario (`PermissionPageBase`). Las reglas funcionales de edición que `perms_json` no expresa (rol, área, interruptores de `ABM_PLANI`) viven en `Application/Identidad/ReglasPermisosIvc` como funciones puras sobre un `UsuarioIvc`; `IUsuarioActual` construye ese usuario una vez por circuito desde los claims y la base (áreas por `AREAS.AuthAreaId`, alta y nombre en `UsuariosVinculados`) y `IPermisosIvc` evalúa las reglas con el estado vigente. Los campos inline de las grillas los edita cualquier usuario autenticado; con la planificación cerrada se bloquean sólo alta, ventana y baja (dictamen del área del 04/11/2026). Las reglas se verifican en cada handler que escribe, además de ocultar controles.
 - **Auditoría:** toda alta/edición/baja manual queda registrada en `CambiosAuditoria` (quién, cuándo, campo, valor anterior y nuevo).
 - **Catálogos:** Barrios, Empresas, Líneas de gestión, Líneas FF, Proyectos y Movimientos son grillas con edición inline sobre `GridPageBase`; alta, edición y baja se habilitan por `perms_json` (el legado no aplicaba las reglas de planificación en estos ABM). Los nombres de Barrios, Empresas y Líneas se exigen únicos. La obra de un proyecto o de un movimiento se elige sólo en el alta (un proyecto por obra, como la restricción única de `BD_PROYECTOS`). Un borrado que la base rechaza por estar en uso vuelve como mensaje al usuario (el legado lo tragaba). El "Autorizado nuevo" de Movimientos se calcula como en el legado (autorizado 2025 del proyecto más todos los movimientos de la obra) y el test de integración lo compara fila por fila con la consulta original. Los montos siguen la regla del legado: positivos con hasta dos decimales.
+- **Obras:** la grilla muestra las obras de las áreas del usuario (administradores y Redeterminaciones ven todas) con los indicadores del legado calculados en `Application/Obras/IndicadoresObra` sobre los agregados de autorizantes, certificados (vinculados por `CODIGO_AUTORIZANTE`) y legítimos; las columnas financieras se ocultan al área Redeterminaciones también en el export. Alta, edición y baja van en ventana y sólo con la planificación abierta; el área se elige en el alta (restringida a las del usuario) y no se cambia al editar. El test de integración compara los indicadores de todas las obras con las mismas fórmulas escritas en SQL.
 - **Cultura:** `es-AR` fija (coma decimal, `dd/MM/yyyy`).
 - **Inglés** para nombres de capas/carpetas; el dominio funcional va en español.
 - **Commits:** Conventional Commits (`feat`, `fix`, `refactor`, `docs`, `chore`). Ramas: `dev` integración, `main` producción, `feature/*`, `fix/*`, `hotfix/*`.

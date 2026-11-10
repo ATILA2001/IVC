@@ -148,6 +148,10 @@ public static class IvcBuilderExtensions
         builder.Services.AddScoped<IMovimientosService, MovimientosService>();
         builder.Services.AddScoped<ILookupService, LookupService>();
 
+        // Obras (fase 5): indicadores calculados sobre autorizantes, certificados y legítimos.
+        builder.Services.AddTransient<IObraRepository, ObraRepository>();
+        builder.Services.AddScoped<IObrasService, ObrasService>();
+
         // Identidad IVC: el usuario se construye una vez por circuito (reemplaza a Session["Usuario"]).
         builder.Services.AddScoped<IUsuarioIvcFactory, UsuarioIvcFactory>();
         builder.Services.AddScoped<IUsuarioActual, UsuarioActualService>();

@@ -11,4 +11,8 @@ public interface ILookupRepository
     /// <summary>Obras que todavía no tienen fila en BD_PROYECTOS (alta de proyecto); el texto agrega la empresa.</summary>
     Task<IReadOnlyList<OpcionLookup>> GetObrasSinProyectoAsync(CancellationToken ct = default);
     Task<IReadOnlyList<OpcionLookup>> GetLineasGestionAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<OpcionLookup>> GetAreasAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<OpcionLookup>> GetEmpresasAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<OpcionLookup>> GetContratasAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<OpcionLookup>> GetBarriosAsync(CancellationToken ct = default);
 }

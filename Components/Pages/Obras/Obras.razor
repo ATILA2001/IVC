@@ -1,0 +1,89 @@
+@page "/obras"
+@using IVC.Application.Obras.Dtos
+@inherits IVC.Components.GridPageBase<IVC.Application.Obras.Dtos.ObraViewModel>
+
+<PageTitle>Obras — IVC</PageTitle>
+
+<RadzenStack>
+    <GridToolbar Titulo="Obras"
+                 SizeTitulo="3"
+                 SizeAcciones="9"
+                 OnBuscar="@OnBusquedaChanged"
+                 TextoBusqueda="@_textoBusqueda"
+                 PlaceholderBusqueda="Buscar obra, empresa, contrata, barrio, área, línea o proyecto…"
+                 LimpiarFiltrosDeshabilitado="@(!HayFiltrosActivos)"
+                 MostrarNuevo="@(CanCreate && _puedeModificar)"
+                 NuevoDeshabilitado="@(_loading || _areasPermitidas.Count == 0)"
+                 OnNuevo="@NuevoEnVentana"
+                 Exportando="@_exportando"
+                 ExportarDeshabilitado="@ExportarDeshabilitado"
+                 TituloExportarDeshabilitado="@MotivoExportarDeshabilitado"
+                 OnExportar="@ExportarObras"
+                 OnLimpiarFiltros="@LimpiarFiltros" />
+
+    @if (_loading)
+    {
+        <EstadoCarga Texto="@($"Cargando {TituloEntidad}…")" />
+    }
+    else
+    {
+        <RadzenDataGrid @ref="_grid"
+                        Data="@ItemsVisibles"
+                        TItem="ObraViewModel"
+                        Filter="@OnGridFilter"
+                        FilterCleared="@OnGridFilter"
+                        SettingsChanged="@GuardarSettingsGrilla"
+                        LoadSettings="@CargarSettingsGrilla"
+                        AllowFiltering="true"
+                        AllowSorting="true"
+                        AllowColumnResize="true"
+                        FilterMode="FilterMode.CheckBoxList"
+                        ClearFilterText="@GridTextos.LimpiarFiltro"
+                        ApplyFilterText="@GridTextos.AplicarFiltro"
+                        EmptyText="@GridTextos.Vacio"
+                        AllowPaging="false"
+                        AllowVirtualization="true"
+                        Style="height: calc(100vh - 15rem)">
+            <Columns>
+                <RadzenDataGridColumn TItem="ObraViewModel" Property="Descripcion" Title="Nombre de obra" Width="280px" Frozen="true" />
+                <RadzenDataGridColumn TItem="ObraViewModel" Property="Area" Title="Área" Width="140px" />
+                <RadzenDataGridColumn TItem="ObraViewModel" Property="Empresa" Title="Empresa" Width="180px" />
+                <RadzenDataGridColumn TItem="ObraViewModel" Property="ContrataTexto" Title="Contrata" Width="170px" />
+                <RadzenDataGridColumn TItem="ObraViewModel" Property="Barrio" Title="Barrio" Width="150px" />
+                <RadzenDataGridColumn TItem="ObraViewModel" Property="LineaGestionNombre" Title="Línea de gestión" Width="180px" />
+                <RadzenDataGridColumn TItem="ObraViewModel" Property="ProyectoNombre" Title="Proyecto" Width="180px" />
+                @* Columnas financieras: ocultas al área Redeterminaciones, como en el legado. *@
+                <RadzenDataGridColumn TItem="ObraViewModel" Property="Autorizado2026" Title="Disponible actual" Width="150px" FormatString="{0:N2}" TextAlign="TextAlign.Right" Visible="@_veFinanzas" />
+                <RadzenDataGridColumn TItem="ObraViewModel" Property="MontoCertificado" Title="Monto certificado" Width="150px" FormatString="{0:N2}" TextAlign="TextAlign.Right" Visible="@_veFinanzas" />
+                <RadzenDataGridColumn TItem="ObraViewModel" Property="Porcentaje" Title="Porcentaje" Width="110px" FormatString="{0:N2} %" TextAlign="TextAlign.Right" Visible="@_veFinanzas" />
+                <RadzenDataGridColumn TItem="ObraViewModel" Property="MontoInicial" Title="Monto de obra inicial" Width="160px" FormatString="{0:N2}" TextAlign="TextAlign.Right" Visible="@_veFinanzas" />
+                <RadzenDataGridColumn TItem="ObraViewModel" Property="MontoActual" Title="Monto de obra actual" Width="160px" FormatString="{0:N2}" TextAlign="TextAlign.Right" Visible="@_veFinanzas" />
+                <RadzenDataGridColumn TItem="ObraViewModel" Property="MontoFaltante" Title="Faltante de obra" Width="150px" FormatString="{0:N2}" TextAlign="TextAlign.Right" Visible="@_veFinanzas" />
+                <RadzenDataGridColumn TItem="ObraViewModel" Property="FechaInicio" Title="Fecha inicio" Width="120px" FormatString="{0:dd/MM/yyyy}" />
+                <RadzenDataGridColumn TItem="ObraViewModel" Property="FechaFin" Title="Fecha fin" Width="120px" FormatString="{0:dd/MM/yyyy}" />
+                <RadzenDataGridColumn TItem="ObraViewModel" Property="EjecFisica" Title="Ejec. física (%)" Width="130px" FormatString="{0:N2} %" TextAlign="TextAlign.Right" />
+                <RadzenDataGridColumn TItem="ObraViewModel" Property="FaltanteEjecFisica" Title="Faltante fís. (%)" Width="130px" FormatString="{0:N2} %" TextAlign="TextAlign.Right" />
+                @if (CanEdit || CanDelete || CanCreate)
+                {
+                    <RadzenDataGridColumn TItem="ObraViewModel" Title="Acciones" Width="150px" Frozen="true" FrozenPosition="FrozenColumnPosition.Right" Filterable="false" Sortable="false">
+                        <Template Context="item">
+                            @* Sin edición inline: la obra se edita en ventana, como el modal del legado.
+                               Con la planificación cerrada sólo queda el historial. *@
+                            <AccionesFila MostrarEditar="@(CanEdit && _puedeModificar)"
+                                          MostrarEliminar="@(CanDelete && _puedeModificar)"
+                                          OnEditar="@(() => EditarEnVentana(item))"
+                                          OnEliminar="@(() => DeleteRow(item))"
+                                          OnHistorial="@(() => VerHistorial(item))" />
+                        </Template>
+                    </RadzenDataGridColumn>
+                }
+            </Columns>
+            <FooterTemplate>
+                @* Subtotal del legado: monto certificado de las filas a la vista. *@
+                <GridFooterTotales Filas="@(_grid?.View?.Count() ?? 0)"
+                                   TotalFilas="@_items.Count"
+                                   Importe="@(_veFinanzas ? (_grid?.View?.Sum(x => x.MontoCertificado ?? 0m) ?? 0m) : null)" />
+            </FooterTemplate>
+        </RadzenDataGrid>
+    }
+</RadzenStack>
