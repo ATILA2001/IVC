@@ -14,10 +14,13 @@ namespace Tests.TestSupport;
 /// </summary>
 internal static class BunitPermissionTestExtensions
 {
-    public static void AddPermissivePermissions(this Bunit.TestContext context)
+    /// <param name="roles">Roles del usuario de prueba (por ejemplo "Admin" para las páginas de administración).</param>
+    public static void AddPermissivePermissions(this Bunit.TestContext context, params string[] roles)
     {
         var authContext = context.AddTestAuthorization();
         authContext.SetAuthorized("test-user");
+        if (roles.Length > 0)
+            authContext.SetRoles(roles);
 
         var permissionService = new Mock<IPermissionService>();
         permissionService

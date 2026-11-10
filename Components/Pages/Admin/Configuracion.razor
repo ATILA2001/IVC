@@ -1,0 +1,93 @@
+@page "/admin/configuracion"
+@using IVC.Application.Identidad.Dtos
+@inherits IVC.Components.PermissionPageBase
+
+<PageTitle>Configuración — IVC</PageTitle>
+
+<RadzenStack Gap="1rem" Style="max-width: 900px;">
+    @* h1: FocusOnNavigate lo enfoca al navegar. Tamaño de h2 como en GridToolbar. *@
+    <h1 style="margin: 7px 0; font-size: 1.5rem;">Configuración de planificación y formulación</h1>
+
+    @if (_loading)
+    {
+        <EstadoCarga Texto="Cargando configuración…" />
+    }
+    else if (!_esAdmin)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Warning" AllowClose="false" Variant="Variant.Flat">
+            Esta página es sólo para administradores.
+        </RadzenAlert>
+    }
+    else
+    {
+        <RadzenCard>
+            <RadzenStack Gap="0.75rem">
+                <RadzenText TextStyle="TextStyle.H6" Style="margin: 0;">Estado global</RadzenText>
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem">
+                    <RadzenSwitch Name="swPlanificacion"
+                                  Value="@_estado.PlanificacionAbierta"
+                                  ValueChanged="@(async (bool v) => await CambiarPlanificacion(v))"
+                                  Disabled="@_guardando" />
+                    <RadzenLabel Text="Planificación abierta" Component="swPlanificacion" />
+                </RadzenStack>
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem">
+                    <RadzenSwitch Name="swFormulacion"
+                                  Value="@_estado.FormulacionAbierta"
+                                  ValueChanged="@(async (bool v) => await CambiarFormulacion(v))"
+                                  Disabled="@_guardando" />
+                    <RadzenLabel Text="Formulación abierta" Component="swFormulacion" />
+                </RadzenStack>
+            </RadzenStack>
+        </RadzenCard>
+
+        @if (_estado.PlanificacionAbierta)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Info" AllowClose="false" Variant="Variant.Flat">
+                La planificación está abierta para todos: las habilitaciones individuales no tienen efecto.
+            </RadzenAlert>
+        }
+        else
+        {
+            <RadzenCard>
+                <RadzenStack Gap="0.75rem">
+                    <div>
+                        <RadzenText TextStyle="TextStyle.H6" Style="margin: 0;">Planificación por usuario</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0; color: var(--rz-text-secondary-color);">
+                            Permite que usuarios específicos planifiquen aunque la planificación global esté cerrada.
+                            Los usuarios aparecen acá al ingresar por primera vez al sistema.
+                        </RadzenText>
+                    </div>
+                    @if (_usuarios.Count == 0)
+                    {
+                        <RadzenText TextStyle="TextStyle.Body1" Style="margin: 0;">No hay usuarios registrados aún.</RadzenText>
+                    }
+                    else
+                    {
+                        <RadzenDataGrid TItem="UsuarioVinculadoViewModel"
+                                        Data="@_usuarios"
+                                        AllowSorting="true"
+                                        AllowFiltering="true"
+                                        FilterMode="FilterMode.Simple"
+                                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                        AllowPaging="false"
+                                        EmptyText="@GridTextos.Vacio"
+                                        Density="Density.Compact">
+                            <Columns>
+                                <RadzenDataGridColumn TItem="UsuarioVinculadoViewModel" Property="@nameof(UsuarioVinculadoViewModel.Nombre)" Title="Usuario" />
+                                <RadzenDataGridColumn TItem="UsuarioVinculadoViewModel" Title="Planificación habilitada" Width="220px"
+                                                      Sortable="false" Filterable="false" TextAlign="TextAlign.Center">
+                                    <Template Context="usuario">
+                                        <RadzenSwitch Value="@usuario.PlanificacionAbierta"
+                                                      ValueChanged="@(async (bool v) => await CambiarOverride(usuario, v))"
+                                                      Disabled="@_guardando"
+                                                      aria-label="@($"Planificación habilitada para {usuario.Nombre}")" />
+                                    </Template>
+                                </RadzenDataGridColumn>
+                            </Columns>
+                        </RadzenDataGrid>
+                    }
+                </RadzenStack>
+            </RadzenCard>
+        }
+    }
+</RadzenStack>
