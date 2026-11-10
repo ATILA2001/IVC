@@ -78,6 +78,18 @@ html, body, #app {
     overflow: auto;
 }
 
+/* Grilla embebida en una tarjeta (la de usuarios de Configuración): no hay "alto
+   restante" que ocupar, así que las dos reglas de arriba la colapsan a cero. Con esta
+   clase crece con su contenido, como una tabla común. */
+.rz-body .rz-data-grid.ivc-grilla-embebida {
+    flex: none;
+}
+
+.rz-body .rz-data-grid.ivc-grilla-embebida .rz-data-grid-data {
+    flex: none;
+    min-height: auto;
+}
+
 /* Grillas dentro de pestañas (Control OP). La regla de arriba le da al grid
    "el alto restante" (flex 1 1 0), pero eso exige que la cadena de contenedores
    flex llegue sin cortes desde .rz-body; el RadzenTabs la corta (sus paneles son

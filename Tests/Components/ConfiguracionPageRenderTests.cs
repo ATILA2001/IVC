@@ -53,6 +53,9 @@ public class ConfiguracionPageRenderTests
             StringAssert.Contains(cut.Markup, "Planificación abierta");
             StringAssert.Contains(cut.Markup, "Formulación abierta");
             StringAssert.Contains(cut.Markup, "rz-data-grid");
+            // Sin esta clase, la regla de app.css para grillas de página completa la colapsa
+            // a cero alto dentro de la tarjeta (se vio en la prueba manual del 10/11/2026).
+            StringAssert.Contains(cut.Markup, "ivc-grilla-embebida");
             StringAssert.Contains(cut.Markup, "PRUEBA-ANA");
             StringAssert.Contains(cut.Markup, "PRUEBA-BRUNO");
         }, timeout: TimeSpan.FromSeconds(5));

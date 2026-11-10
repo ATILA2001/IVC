@@ -64,4 +64,11 @@ public static class ReglasPermisosIvc
     /// <summary>Columnas financieras de Obras: ocultas al área Redeterminaciones.</summary>
     public static bool VeColumnasFinancieras(UsuarioIvc usuario)
         => usuario.Autenticado && !EsDeArea(usuario, IvcAreaIds.Redeterminaciones);
+
+    /// <summary>
+    /// Obras: administradores y el área Redeterminaciones ven todas; el resto, sólo las
+    /// de sus áreas (con <see cref="AreaIdsParaFiltro"/>).
+    /// </summary>
+    public static bool VeTodasLasObras(UsuarioIvc usuario)
+        => usuario.Autenticado && (usuario.EsAdmin || EsDeArea(usuario, IvcAreaIds.Redeterminaciones));
 }

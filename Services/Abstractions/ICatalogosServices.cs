@@ -58,4 +58,8 @@ public interface ILookupService
     Task<IReadOnlyList<OpcionLookup>> GetObrasAsync(CancellationToken ct = default);
     Task<IReadOnlyList<OpcionLookup>> GetObrasSinProyectoAsync(CancellationToken ct = default);
     Task<IReadOnlyList<OpcionLookup>> GetLineasGestionAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<OpcionLookup>> GetAreasAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<OpcionLookup>> GetEmpresasAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<OpcionLookup>> GetContratasAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<OpcionLookup>> GetBarriosAsync(CancellationToken ct = default);
 }

@@ -39,6 +39,26 @@ public class LookupRepository(IDbContextFactory<IvcDbContext> dbFactory) : ILook
             .ToListAsync(ct);
     }
 
+    // El OrderBy va ANTES del Select: ordenar por una propiedad del record proyectado no
+    // se traduce a SQL (la base en memoria de los tests lo acepta; SQL Server no).
+    public Task<IReadOnlyList<OpcionLookup>> GetAreasAsync(CancellationToken ct = default) =>
+        CatalogoAsync(db => db.Areas.OrderBy(a => a.Nombre).Select(a => new OpcionLookup(a.Id, a.Nombre ?? string.Empty)), ct);
+
+    public Task<IReadOnlyList<OpcionLookup>> GetEmpresasAsync(CancellationToken ct = default) =>
+        CatalogoAsync(db => db.Empresas.OrderBy(e => e.Nombre).Select(e => new OpcionLookup(e.Id, e.Nombre ?? string.Empty)), ct);
+
+    public Task<IReadOnlyList<OpcionLookup>> GetContratasAsync(CancellationToken ct = default) =>
+        CatalogoAsync(db => db.Contratas.OrderBy(c => c.Nombre).Select(c => new OpcionLookup(c.Id, c.Nombre ?? string.Empty)), ct);
+
+    public Task<IReadOnlyList<OpcionLookup>> GetBarriosAsync(CancellationToken ct = default) =>
+        CatalogoAsync(db => db.Barrios.OrderBy(b => b.Nombre).Select(b => new OpcionLookup(b.Id, b.Nombre ?? string.Empty)), ct);
+
+    private async Task<IReadOnlyList<OpcionLookup>> CatalogoAsync(Func<IvcDbContext, IQueryable<OpcionLookup>> consulta, CancellationToken ct)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+        return await consulta(db).AsNoTracking().ToListAsync(ct);
+    }
+
     /// <summary>
     /// Texto del desplegable de obras del legado: barrio - descripción [- empresa] -
     /// contrata - número/año. Las partes sin dato se omiten (el legado las excluía con

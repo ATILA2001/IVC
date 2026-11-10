@@ -99,4 +99,8 @@ public class LookupService(ILookupRepository repo) : ILookupService
     public Task<IReadOnlyList<OpcionLookup>> GetObrasAsync(CancellationToken ct = default) => repo.GetObrasAsync(ct);
     public Task<IReadOnlyList<OpcionLookup>> GetObrasSinProyectoAsync(CancellationToken ct = default) => repo.GetObrasSinProyectoAsync(ct);
     public Task<IReadOnlyList<OpcionLookup>> GetLineasGestionAsync(CancellationToken ct = default) => repo.GetLineasGestionAsync(ct);
+    public Task<IReadOnlyList<OpcionLookup>> GetAreasAsync(CancellationToken ct = default) => repo.GetAreasAsync(ct);
+    public Task<IReadOnlyList<OpcionLookup>> GetEmpresasAsync(CancellationToken ct = default) => repo.GetEmpresasAsync(ct);
+    public Task<IReadOnlyList<OpcionLookup>> GetContratasAsync(CancellationToken ct = default) => repo.GetContratasAsync(ct);
+    public Task<IReadOnlyList<OpcionLookup>> GetBarriosAsync(CancellationToken ct = default) => repo.GetBarriosAsync(ct);
 }

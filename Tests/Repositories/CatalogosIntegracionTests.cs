@@ -45,6 +45,14 @@ public class CatalogosIntegracionTests
         var lookup = new LookupRepository(factory);
         var obras = await lookup.GetObrasAsync();
         var sinProyecto = await lookup.GetObrasSinProyectoAsync();
+        // Los desplegables de Obras: una proyección mal ordenada no se traduce a SQL y
+        // sólo se nota contra la base real.
+        var areas = await lookup.GetAreasAsync();
+        var empresasLookup = await lookup.GetEmpresasAsync();
+        var contratas = await lookup.GetContratasAsync();
+        var barriosLookup = await lookup.GetBarriosAsync();
+        Assert.IsTrue(areas.Count > 0 && empresasLookup.Count > 0 && contratas.Count > 0 && barriosLookup.Count > 0);
+        CollectionAssert.AreEqual(areas.Select(a => a.Nombre).OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase).ToList(), areas.Select(a => a.Nombre).ToList(), "ordenadas por nombre");
 
         Console.WriteLine($"Barrios {barrios.Count}, empresas {empresas.Count}, líneas {lineas.Count}, FF {ff.Count}, obras {obras.Count}, sin proyecto {sinProyecto.Count}");
         Assert.IsTrue(barrios.Count > 0 && empresas.Count > 0 && lineas.Count > 0);
