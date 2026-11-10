@@ -1,0 +1,123 @@
+@page "/movimientos"
+@using IVC.Application.Catalogos
+@using IVC.Application.Catalogos.Dtos
+@using IVC.Application.Common
+@inherits IVC.Components.GridPageBase<IVC.Application.Catalogos.Dtos.MovimientoViewModel>
+
+<PageTitle>Movimientos de gestión — IVC</PageTitle>
+
+<RadzenStack>
+    <GridToolbar Titulo="Movimientos de gestión"
+                 SizeTitulo="4"
+                 SizeAcciones="8"
+                 OnBuscar="@OnBusquedaChanged"
+                 TextoBusqueda="@_textoBusqueda"
+                 PlaceholderBusqueda="Buscar obra, proyecto o línea…"
+                 LimpiarFiltrosDeshabilitado="@(!HayFiltrosActivos)"
+                 MostrarNuevo="@CanCreate"
+                 NuevoDeshabilitado="@(_loading || _obras.Count == 0)"
+                 OnNuevo="@AddRow"
+                 Exportando="@_exportando"
+                 ExportarDeshabilitado="@ExportarDeshabilitado"
+                 TituloExportarDeshabilitado="@MotivoExportarDeshabilitado"
+                 OnExportar="@ExportarExcel"
+                 OnLimpiarFiltros="@LimpiarFiltros" />
+
+    @if (_loading)
+    {
+        <EstadoCarga Texto="@($"Cargando {TituloEntidad}…")" />
+    }
+    else
+    {
+        <RadzenDataGrid @ref="_grid"
+                        Data="@ItemsVisibles"
+                        TItem="MovimientoViewModel"
+                        Filter="@OnGridFilter"
+                        FilterCleared="@OnGridFilter"
+                        SettingsChanged="@GuardarSettingsGrilla"
+                        LoadSettings="@CargarSettingsGrilla"
+                        AllowFiltering="true"
+                        AllowSorting="true"
+                        AllowColumnResize="true"
+                        FilterMode="FilterMode.CheckBoxList"
+                        ClearFilterText="@GridTextos.LimpiarFiltro"
+                        ApplyFilterText="@GridTextos.AplicarFiltro"
+                        EmptyText="@GridTextos.Vacio"
+                        AllowPaging="false"
+                        AllowVirtualization="true"
+                        Style="height: calc(100vh - 15rem)"
+                        EditMode="DataGridEditMode.Single"
+                        RowEdit="@OnRowEdit"
+                        RowUpdate="@OnRowUpdate"
+                        RowCreate="@OnRowCreate">
+            <Columns>
+                <RadzenDataGridColumn TItem="MovimientoViewModel" Property="Obra" Title="Obra" Width="320px" Frozen="true">
+                    <EditTemplate Context="item">
+                        @if (item.Id == 0)
+                        {
+                            @* La obra se elige sólo en el alta: el movimiento no cambia de obra. *@
+                            <RadzenDropDown TValue="int"
+                                            @bind-Value="Buffer(item).ObraId"
+                                            Data="@_obras"
+                                            TextProperty="@nameof(OpcionLookup.Nombre)"
+                                            ValueProperty="@nameof(OpcionLookup.Id)"
+                                            AllowFiltering="true"
+                                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                            Placeholder="Elegí la obra…"
+                                            aria-label="Obra"
+                                            class="@GetValidationCssClass(Buffer(item).ObraId > 0)"
+                                            Style="width:100%" />
+                        }
+                        else
+                        {
+                            @item.Obra
+                        }
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="MovimientoViewModel" Property="Proyecto" Title="Proyecto" Width="200px" />
+                <RadzenDataGridColumn TItem="MovimientoViewModel" Property="SubProyecto" Title="SubProyecto" Width="200px" />
+                <RadzenDataGridColumn TItem="MovimientoViewModel" Property="Linea" Title="Línea de gestión" Width="200px" />
+                <RadzenDataGridColumn TItem="MovimientoViewModel" Property="Monto" Title="Movimiento" Width="150px" FormatString="{0:N2}" TextAlign="TextAlign.Right">
+                    <EditTemplate Context="item">
+                        <RadzenNumeric TValue="decimal?" @bind-Value="Buffer(item).Monto" Format="N2" Min="0"
+                                       aria-label="Movimiento (monto)"
+                                       class="@GetValidationCssClass(Buffer(item).Monto is >= 0)"
+                                       Style="width:100%" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="MovimientoViewModel" Property="Fecha" Title="Fecha" Width="140px" FormatString="{0:dd/MM/yyyy}">
+                    <EditTemplate Context="item">
+                        <RadzenDatePicker TValue="DateTime?" @bind-Value="Buffer(item).Fecha" DateFormat="dd/MM/yyyy" ShowTime="false"
+                                          aria-label="Fecha"
+                                          class="@GetValidationCssClass(Buffer(item).Fecha is not null)"
+                                          Style="width:100%" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="MovimientoViewModel" Property="Autorizado2026" Title="Autorizado nuevo" Width="160px" FormatString="{0:N2}" TextAlign="TextAlign.Right" />
+                @if (CanEdit || CanDelete || CanCreate)
+                {
+                    <RadzenDataGridColumn TItem="MovimientoViewModel" Title="Acciones" Width="150px" Frozen="true" FrozenPosition="FrozenColumnPosition.Right" Filterable="false" Sortable="false">
+                        <Template Context="item">
+                            <AccionesFila MostrarEditar="@CanEdit"
+                                          MostrarEliminar="@CanDelete"
+                                          OnEditar="@(() => _grid.EditRow(item))"
+                                          OnEliminar="@(() => DeleteRow(item))"
+                                          OnHistorial="@(() => VerHistorial(item))" />
+                        </Template>
+                        <EditTemplate Context="item">
+                            <AccionesFila Edicion="true"
+                                          OnGuardar="@(() => GuardarFila(item))"
+                                          OnCancelar="@(() => CancelEdit(item))" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                }
+            </Columns>
+            <FooterTemplate>
+                @* View y no _items: lo que queda a la vista con los filtros aplicados. *@
+                <GridFooterTotales Filas="@(_grid?.View?.Count() ?? 0)"
+                                   TotalFilas="@_items.Count"
+                                   Importe="@(_grid?.View?.Sum(x => x.Monto ?? 0m) ?? 0m)" />
+            </FooterTemplate>
+        </RadzenDataGrid>
+    }
+</RadzenStack>

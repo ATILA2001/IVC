@@ -132,6 +132,21 @@ public static class IvcBuilderExtensions
         builder.Services.AddTransient<IAreaRepository, AreaRepository>();
         builder.Services.AddTransient<IUsuarioVinculadoRepository, UsuarioVinculadoRepository>();
         builder.Services.AddTransient<IAbmPlaniRepository, AbmPlaniRepository>();
+        builder.Services.AddTransient<ICatalogoSimpleRepository, CatalogoSimpleRepository>();
+        builder.Services.AddTransient<ILineaGestionRepository, LineaGestionRepository>();
+        builder.Services.AddTransient<ILineaGestionFFRepository, LineaGestionFFRepository>();
+        builder.Services.AddTransient<IProyectoRepository, ProyectoRepository>();
+        builder.Services.AddTransient<IMovimientoRepository, MovimientoRepository>();
+        builder.Services.AddTransient<ILookupRepository, LookupRepository>();
+
+        // Catálogos (fase 4). El servicio genérico se cierra con la entidad en cada página
+        // (Barrios, Empresas): un registro abierto alcanza para todas.
+        builder.Services.AddScoped(typeof(ICatalogoSimpleService<>), typeof(CatalogoSimpleService<>));
+        builder.Services.AddScoped<ILineasGestionService, LineasGestionService>();
+        builder.Services.AddScoped<ILineasGestionFFService, LineasGestionFFService>();
+        builder.Services.AddScoped<IProyectosService, ProyectosService>();
+        builder.Services.AddScoped<IMovimientosService, MovimientosService>();
+        builder.Services.AddScoped<ILookupService, LookupService>();
 
         // Identidad IVC: el usuario se construye una vez por circuito (reemplaza a Session["Usuario"]).
         builder.Services.AddScoped<IUsuarioIvcFactory, UsuarioIvcFactory>();
