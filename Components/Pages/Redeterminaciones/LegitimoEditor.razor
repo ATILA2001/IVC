@@ -39,8 +39,7 @@
                     </RadzenColumn>
                     <RadzenColumn Size="6">
                         <RadzenFormField Text="Expediente" Variant="Variant.Outlined" Style="width: 100%;">
-                            <RadzenTextBox @bind-Value="Borrador.Expediente" MaxLength="@LegitimoValidator.ExpedienteMaxLength"
-                                           class="@GetValidationCssClass(!string.IsNullOrWhiteSpace(Borrador.Expediente))" />
+                            <RadzenTextBox @bind-Value="Borrador.Expediente" MaxLength="@LegitimoValidator.ExpedienteMaxLength" Placeholder="Opcional" />
                         </RadzenFormField>
                     </RadzenColumn>
                 </RadzenRow>

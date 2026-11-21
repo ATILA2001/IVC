@@ -192,7 +192,7 @@ public class RedeterminacionesParidadTests
     }
 
     [TestMethod]
-    public async Task Legitimos_SigafTotalDelExpediente_YRedeterminaciones_SadeCoincideConLaVista()
+    public async Task Legitimos_SigafRepartidoPorExpediente_YRedeterminaciones_SadeCoincideConLaVista()
     {
         var armado = await ArmarAsync();
         if (armado is null) { Assert.Inconclusive($"Sin {Variable}: test de integración omitido."); return; }
@@ -203,21 +203,31 @@ public class RedeterminacionesParidadTests
         Assert.AreEqual(await db.Legitimos.AsNoTracking().CountAsync(), legitimos.Count);
         Assert.AreEqual(await db.Redeterminaciones.AsNoTracking().CountAsync(), redets.Count);
 
-        // R4: el legítimo lleva el devengado completo de su expediente.
-        var devengados = await db.Devengados.AsNoTracking()
+        // El devengado del expediente se reparte entre los legítimos que lo comparten (PR #19 del legado);
+        // R4: sin mezclar con certificados. Las claves de DEVENGADOS traen espacios finales y otra grafía.
+        var devengados = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        foreach (var d in await db.Devengados.AsNoTracking()
             .Where(d => d.EeFinanciera != null)
             .GroupBy(d => d.EeFinanciera!)
             .Select(g => new { Expediente = g.Key, Total = g.Sum(d => d.ImportePp) ?? 0m })
-            .ToDictionaryAsync(x => x.Expediente, x => x.Total);
+            .ToListAsync())
+            devengados[d.Expediente.Trim()] = devengados.GetValueOrDefault(d.Expediente.Trim()) + d.Total;
+        var montosPorExpediente = legitimos
+            .Where(l => !string.IsNullOrWhiteSpace(l.Expediente))
+            .GroupBy(l => l.Expediente!.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => (IReadOnlyCollection<decimal>)g.Select(l => l.Certificado ?? 0m).ToList(), StringComparer.OrdinalIgnoreCase);
         var diferencias = new List<string>();
         foreach (var l in legitimos)
         {
-            decimal? esperado = !string.IsNullOrWhiteSpace(l.Expediente) && devengados.TryGetValue(l.Expediente.Trim(), out var t) ? t : null;
+            decimal? esperado = null;
+            if (!string.IsNullOrWhiteSpace(l.Expediente) && devengados.TryGetValue(l.Expediente.Trim(), out var t))
+                esperado = ReglasRedeterminaciones.ProrratearSigaf(t, l.Certificado ?? 0m, montosPorExpediente[l.Expediente.Trim()]);
             if (decimal.Round(l.Sigaf ?? -1, 2) != decimal.Round(esperado ?? -1, 2)) diferencias.Add($"legítimo {l.Id}: SIGAF {l.Sigaf} vs {esperado}");
             var estado = ReglasRedeterminaciones.DeterminarEstado(l.Expediente, l.Sigaf);
             if (l.Estado != estado) diferencias.Add($"legítimo {l.Id}: estado {l.Estado} vs {estado}");
         }
-        Console.WriteLine($"Legítimos: {legitimos.Count}; con SIGAF: {legitimos.Count(l => l.Sigaf is not null)}; con SADE: {legitimos.Count(l => l.BuzonSade is not null)}");
+        Console.WriteLine($"Legítimos: {legitimos.Count}; con SIGAF: {legitimos.Count(l => l.Sigaf is not null)}; con SADE: {legitimos.Count(l => l.BuzonSade is not null)}; " +
+                          $"expedientes compartidos: {montosPorExpediente.Count(g => g.Value.Count > 1)}");
 
         var vista = await db.Database.SqlQuery<VistaRedet>($"SELECT RedeterminacionId, CodigoRedet, EstadoGeneralId, MontoRedet, BuzonSade, FechaSade FROM dbo.vw_PBI_Redeterminaciones")
             .ToDictionaryAsync(v => v.RedeterminacionId);

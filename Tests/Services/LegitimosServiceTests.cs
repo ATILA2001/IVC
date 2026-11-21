@@ -13,8 +13,9 @@ using Moq;
 namespace Tests.Services;
 
 /// <summary>
-/// El servicio de legítimos: filtro por área, SIGAF total del expediente (sin prorrateo,
-/// R4), estado y SADE por fila, y las escrituras con la obra fija y el inline acotado.
+/// El servicio de legítimos: filtro por área, SIGAF repartido entre los legítimos del mismo
+/// expediente (hotfix PR #19 del legado; R4: sin mezclar con certificados), estado y SADE por
+/// fila, y las escrituras con la obra fija y el inline acotado.
 /// </summary>
 [TestClass]
 public class LegitimosServiceTests
@@ -36,10 +37,13 @@ public class LegitimosServiceTests
             Permisos.Setup(p => p.PuedeModificarPlanificacionAsync(It.IsAny<CancellationToken>())).ReturnsAsync(planificacionAbierta);
             Permisos.Setup(p => p.PuedeEditarInlineAsync(It.IsAny<CancellationToken>())).ReturnsAsync(inline);
             Repo.Setup(r => r.GetAllAsync(It.IsAny<IReadOnlyCollection<int>?>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync([LegitimoDePrueba(), new Legitimo { Id = 2, ObraId = 10, CodigoAutorizante = "OBRA-9", Expediente = null, Certificado = 5m }]);
+                .ReturnsAsync([LegitimoDePrueba(), new Legitimo { Id = 2, ObraId = 10, CodigoAutorizante = "OBRA-9", Expediente = null, Certificado = 5m }, HermanoDePrueba()]);
             Repo.Setup(r => r.GetByIdAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(LegitimoDePrueba());
+            Repo.Setup(r => r.GetPorExpedienteAsync(It.IsAny<string>(), It.IsAny<IReadOnlyCollection<int>?>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Array.Empty<Legitimo>());
             Externos.Setup(e => e.GetDevengadosAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new Dictionary<string, decimal> { ["EX-L"] = 123m });
+                // Como el repositorio real: claves recortadas y sin distinguir mayúsculas (DatosExternosRepository).
+                .ReturnsAsync(new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase) { ["EX-L"] = 123m });
             Externos.Setup(e => e.GetUltimosPasesSadeAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Dictionary<string, UltimoPaseSade> { ["EX-L"] = new("IVC-4100 GO ECONOMICA FINANCIERA", new DateTime(2026, 9, 1)) });
             Obras.Setup(o => o.GetByIdAsync(10, It.IsAny<CancellationToken>())).ReturnsAsync(new Obra { Id = 10, AreaId = 26, EmpresaId = 2 });
@@ -60,8 +64,15 @@ public class LegitimosServiceTests
         },
     };
 
+    /// <summary>Comparte el expediente con <see cref="LegitimoDePrueba"/> (con otra grafía) y se lleva 3/4 del devengado.</summary>
+    private static Legitimo HermanoDePrueba() => new()
+    {
+        Id = 3, ObraId = 10, CodigoAutorizante = "OBRA-3", Expediente = " ex-l ", Certificado = 1500m, MesAprobacion = new DateTime(2025, 5, 1),
+        Obra = new Obra { Id = 10, Descripcion = "TORRE A", AreaId = 26 },
+    };
+
     [TestMethod]
-    public async Task GetAll_FiltraPorArea_YCompletaSigafTotalEstadoYSade()
+    public async Task GetAll_FiltraPorArea_YReparteElSigafEntreLosLegitimosDelExpediente()
     {
         var admin = new Armado(Usuario(admin: true));
         var filas = await admin.Servicio().GetAllAsync();
@@ -70,7 +81,9 @@ public class LegitimosServiceTests
         var conExpediente = filas.Single(f => f.Id == 1);
         Assert.AreEqual("DGDH", conExpediente.Area);
         Assert.AreEqual("VIVIENDA", conExpediente.LineaGestion);
-        Assert.AreEqual(123m, conExpediente.Sigaf, "el devengado completo, sin prorrateo (R4)");
+        Assert.AreEqual(30.75m, conExpediente.Sigaf, "500 de 2000: un cuarto del devengado (PR #19 del legado)");
+        Assert.AreEqual(92.25m, filas.Single(f => f.Id == 3).Sigaf, "el hermano con otra grafía del expediente se lleva el resto");
+        Assert.AreEqual(123m, filas.Sum(f => f.Sigaf ?? 0m), "el reparto no pierde ni inventa devengado");
         Assert.AreEqual("DEVENGADO", conExpediente.Estado);
         Assert.AreEqual("IVC-4100 GO ECONOMICA FINANCIERA", conExpediente.BuzonSade);
         var sinExpediente = filas.Single(f => f.Id == 2);
@@ -85,6 +98,25 @@ public class LegitimosServiceTests
         var sinAreas = new Armado(Usuario(admin: false));
         Assert.AreEqual(0, (await sinAreas.Servicio().GetAllAsync()).Count);
         sinAreas.Repo.Verify(r => r.GetAllAsync(It.IsAny<IReadOnlyCollection<int>?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task GetById_ReparteConLosHermanosVisiblesDelExpediente()
+    {
+        var solo = new Armado(Usuario(admin: true));
+        Assert.AreEqual(123m, (await solo.Servicio().GetByIdAsync(1))!.Sigaf, "sin hermanos se lleva todo el devengado");
+
+        var admin = new Armado(Usuario(admin: true));
+        admin.Repo.Setup(r => r.GetPorExpedienteAsync("EX-L", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([LegitimoDePrueba(), HermanoDePrueba()]);
+        Assert.AreEqual(30.75m, (await admin.Servicio().GetByIdAsync(1))!.Sigaf, "igual que en la grilla");
+
+        var normal = new Armado(Usuario(admin: false, 26));
+        await normal.Servicio().GetByIdAsync(1);
+        normal.Repo.Verify(r => r.GetPorExpedienteAsync("EX-L",
+            It.Is<IReadOnlyCollection<int>?>(ids => ids != null && ids.SequenceEqual(new[] { 26 })), It.IsAny<CancellationToken>()), Times.Once);
+
+        Assert.IsNull(await admin.Servicio().GetByIdAsync(99));
     }
 
     [TestMethod]
