@@ -14,7 +14,14 @@ public sealed class AutorizanteConfiguration : IEntityTypeConfiguration<Autoriza
 {
     public void Configure(EntityTypeBuilder<Autorizante> e)
     {
-        e.ToTable("AUTORIZANTES");
+        // Con triggers la tabla no admite la cláusula OUTPUT que usa EF Core: hay que declararlos.
+        // TRG_Autorizantes_Insert arma CODIGO_AUTORIZANTE (OBRA-n); trg_Autorizante_CheckMonto
+        // rechaza un monto menor a la suma de certificados.
+        e.ToTable("AUTORIZANTES", t =>
+        {
+            t.HasTrigger("TRG_Autorizantes_Insert");
+            t.HasTrigger("trg_Autorizante_CheckMonto");
+        });
         e.HasKey(x => x.Id);
         e.Property(x => x.Id).HasColumnName("ID").ValueGeneratedOnAdd();
         e.Property(x => x.CodigoAutorizante).HasColumnName("CODIGO_AUTORIZANTE").HasMaxLength(50);
@@ -40,7 +47,9 @@ public sealed class CertificadoConfiguration : IEntityTypeConfiguration<Certific
 {
     public void Configure(EntityTypeBuilder<Certificado> e)
     {
-        e.ToTable("CERTIFICADOS");
+        // trg_Certificado_CheckMonto: rechaza certificados de autorizantes sin AUTORIZACION_GG
+        // y sumas que superen el monto autorizado.
+        e.ToTable("CERTIFICADOS", t => t.HasTrigger("trg_Certificado_CheckMonto"));
         e.HasKey(x => x.Id);
         e.Property(x => x.Id).HasColumnName("ID");
         e.Property(x => x.CodigoAutorizante).HasColumnName("CODIGO_AUTORIZANTE").HasMaxLength(50).IsRequired();

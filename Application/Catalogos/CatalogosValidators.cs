@@ -110,9 +110,5 @@ public static class MovimientoValidator
 internal static class ImporteReglas
 {
     public static void PositivoConDosDecimales(List<string> errores, decimal? valor, string campo)
-    {
-        Validaciones.ImporteNoNegativo(errores, valor, campo);
-        if (valor is decimal v && decimal.Round(v, 2) != v)
-            errores.Add($"{campo} admite hasta 2 decimales.");
-    }
+        => Validaciones.ImportePositivoConDosDecimales(errores, valor, campo);
 }

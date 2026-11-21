@@ -8,4 +8,6 @@ public class Gedo
     public string? Expediente { get; set; }
     /// <summary>Columna NRO_ESPECIAL.</summary>
     public string? Acdir { get; set; }
+    /// <summary>Columna FECHA_FIRMA: GEDO tiene varias filas por expediente y se toma la más reciente.</summary>
+    public DateTime? FechaFirma { get; set; }
 }

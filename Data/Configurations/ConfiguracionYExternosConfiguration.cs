@@ -74,6 +74,7 @@ public sealed class GedoConfiguration : IEntityTypeConfiguration<Gedo>
         // Bajada externa en nvarchar(510), sin clave primaria real.
         e.Property(x => x.Expediente).HasColumnName("NRO_EXPEDIENTE").HasMaxLength(510).IsUnicode(true);
         e.Property(x => x.Acdir).HasColumnName("NRO_ESPECIAL").HasMaxLength(510).IsUnicode(true);
+        e.Property(x => x.FechaFirma).HasColumnName("FECHA_FIRMA").HasColumnType("datetime");
     }
 }
 

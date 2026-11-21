@@ -60,7 +60,8 @@ public sealed class MovimientoGestionConfiguration : IEntityTypeConfiguration<Mo
 {
     public void Configure(EntityTypeBuilder<MovimientoGestion> e)
     {
-        e.ToTable("MOVIMIENTOS_GESTION");
+        // trg_update_autorizado_nuevo existe (deshabilitado en IVC_TEST): declarado por si se habilita.
+        e.ToTable("MOVIMIENTOS_GESTION", t => t.HasTrigger("trg_update_autorizado_nuevo"));
         e.HasKey(x => x.Id);
         e.Property(x => x.Id).HasColumnName("ID");
         e.Property(x => x.ObraId).HasColumnName("ID_BASE");

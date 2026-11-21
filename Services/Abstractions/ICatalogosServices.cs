@@ -56,10 +56,17 @@ public interface IMovimientosService
 public interface ILookupService
 {
     Task<IReadOnlyList<OpcionLookup>> GetObrasAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<OpcionLookup>> GetObrasAsync(IReadOnlyCollection<int>? areaIds, CancellationToken ct = default);
     Task<IReadOnlyList<OpcionLookup>> GetObrasSinProyectoAsync(CancellationToken ct = default);
     Task<IReadOnlyList<OpcionLookup>> GetLineasGestionAsync(CancellationToken ct = default);
     Task<IReadOnlyList<OpcionLookup>> GetAreasAsync(CancellationToken ct = default);
     Task<IReadOnlyList<OpcionLookup>> GetEmpresasAsync(CancellationToken ct = default);
     Task<IReadOnlyList<OpcionLookup>> GetContratasAsync(CancellationToken ct = default);
     Task<IReadOnlyList<OpcionLookup>> GetBarriosAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<OpcionLookup>> GetConceptosAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<OpcionLookup>> GetEstadosAutorizanteAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<OpcionLookup>> GetEstadosRedetAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<OpcionLookup>> GetTiposPagoAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<OpcionLookup>> GetUsuariosRedeterminacionesAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<OpcionLookup>> GetAutorizantesAsync(IReadOnlyCollection<int>? areaIds, CancellationToken ct = default);
 }

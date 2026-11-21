@@ -9,12 +9,15 @@ namespace IVC.Repositories.Implementations;
 
 public class LookupRepository(IDbContextFactory<IvcDbContext> dbFactory) : ILookupRepository
 {
-    public async Task<IReadOnlyList<OpcionLookup>> GetObrasAsync(CancellationToken ct = default)
+    public Task<IReadOnlyList<OpcionLookup>> GetObrasAsync(CancellationToken ct = default) => GetObrasAsync(null, ct);
+
+    public async Task<IReadOnlyList<OpcionLookup>> GetObrasAsync(IReadOnlyCollection<int>? areaIds, CancellationToken ct = default)
     {
+        if (areaIds is { Count: 0 }) return Array.Empty<OpcionLookup>();
         await using var db = await dbFactory.CreateDbContextAsync(ct);
-        var obras = await db.Obras.AsNoTracking()
-            .Include(o => o.Barrio).Include(o => o.Contrata)
-            .ToListAsync(ct);
+        var query = db.Obras.AsNoTracking().Include(o => o.Barrio).Include(o => o.Contrata).AsQueryable();
+        if (areaIds is not null) query = query.Where(o => areaIds.Contains(o.AreaId));
+        var obras = await query.ToListAsync(ct);
         return obras.Select(o => new OpcionLookup(o.Id, TextoObra(o, conEmpresa: false)))
             .OrderBy(x => x.Nombre, StringComparer.CurrentCultureIgnoreCase).ToList();
     }
@@ -52,6 +55,41 @@ public class LookupRepository(IDbContextFactory<IvcDbContext> dbFactory) : ILook
 
     public Task<IReadOnlyList<OpcionLookup>> GetBarriosAsync(CancellationToken ct = default) =>
         CatalogoAsync(db => db.Barrios.OrderBy(b => b.Nombre).Select(b => new OpcionLookup(b.Id, b.Nombre ?? string.Empty)), ct);
+
+    public Task<IReadOnlyList<OpcionLookup>> GetConceptosAsync(CancellationToken ct = default) =>
+        CatalogoAsync(db => db.Conceptos.OrderBy(c => c.Nombre).Select(c => new OpcionLookup(c.Id, c.Nombre ?? string.Empty)), ct);
+
+    public Task<IReadOnlyList<OpcionLookup>> GetEstadosAutorizanteAsync(CancellationToken ct = default) =>
+        CatalogoAsync(db => db.EstadosAutorizante.OrderBy(e => e.Nombre).Select(e => new OpcionLookup(e.Id, e.Nombre ?? string.Empty)), ct);
+
+    public Task<IReadOnlyList<OpcionLookup>> GetEstadosRedetAsync(CancellationToken ct = default) =>
+        CatalogoAsync(db => db.EstadosRedet.OrderBy(e => e.Nombre).Select(e => new OpcionLookup(e.Id, e.Nombre ?? string.Empty)), ct);
+
+    public Task<IReadOnlyList<OpcionLookup>> GetTiposPagoAsync(CancellationToken ct = default) =>
+        CatalogoAsync(db => db.TiposPago.OrderBy(t => t.Nombre).Select(t => new OpcionLookup(t.Id, t.Nombre ?? string.Empty)), ct);
+
+    public Task<IReadOnlyList<OpcionLookup>> GetUsuariosRedeterminacionesAsync(CancellationToken ct = default) =>
+        CatalogoAsync(db => db.Usuarios
+            .Where(u => u.Estado == true && u.AreaId == IVC.Application.Identidad.IvcAreaIds.Redeterminaciones)
+            .OrderBy(u => u.Nombre)
+            .Select(u => new OpcionLookup(u.Id, u.Nombre ?? string.Empty)), ct);
+
+    public async Task<IReadOnlyList<OpcionLookup>> GetAutorizantesAsync(IReadOnlyCollection<int>? areaIds, CancellationToken ct = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+        var query = db.Autorizantes.AsNoTracking().Include(a => a.Obra!).ThenInclude(o => o.Empresa).AsQueryable();
+        if (areaIds is not null)
+        {
+            if (areaIds.Count == 0) return Array.Empty<OpcionLookup>();
+            query = query.Where(a => a.Obra != null && areaIds.Contains(a.Obra.AreaId));
+        }
+        var autorizantes = await query.OrderBy(a => a.CodigoAutorizante).ToListAsync(ct);
+        // Texto del desplegable del legado: código - obra - empresa - detalle.
+        return autorizantes.Select(a => new OpcionLookup(a.Id, string.Join(" - ",
+                new[] { a.CodigoAutorizante, a.Obra?.Descripcion, a.Obra?.Empresa?.Nombre, a.Detalle }
+                    .Where(p => !string.IsNullOrWhiteSpace(p)))))
+            .ToList();
+    }
 
     private async Task<IReadOnlyList<OpcionLookup>> CatalogoAsync(Func<IvcDbContext, IQueryable<OpcionLookup>> consulta, CancellationToken ct)
     {

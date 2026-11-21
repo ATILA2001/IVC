@@ -18,6 +18,17 @@ public static class Validaciones
     }
 
 
+    /// <summary>
+    /// Regla de los montos del legado ("sólo números positivos con hasta 2 decimales"), que
+    /// comparten catálogos, autorizantes, certificados y legítimos.
+    /// </summary>
+    public static void ImportePositivoConDosDecimales(List<string> errores, decimal? valor, string campo)
+    {
+        ImporteNoNegativo(errores, valor, campo);
+        if (valor is decimal v && decimal.Round(v, 2) != v)
+            errores.Add($"{campo} admite hasta 2 decimales.");
+    }
+
     /// <summary>Valida que un importe opcional, si viene cargado, no sea negativo.</summary>
     public static void ImporteNoNegativo(List<string> errores, decimal? valor, string campo)
     {

@@ -97,10 +97,17 @@ public class MovimientosService(IMovimientoRepository repo, ILogger<MovimientosS
 public class LookupService(ILookupRepository repo) : ILookupService
 {
     public Task<IReadOnlyList<OpcionLookup>> GetObrasAsync(CancellationToken ct = default) => repo.GetObrasAsync(ct);
+    public Task<IReadOnlyList<OpcionLookup>> GetObrasAsync(IReadOnlyCollection<int>? areaIds, CancellationToken ct = default) => repo.GetObrasAsync(areaIds, ct);
     public Task<IReadOnlyList<OpcionLookup>> GetObrasSinProyectoAsync(CancellationToken ct = default) => repo.GetObrasSinProyectoAsync(ct);
     public Task<IReadOnlyList<OpcionLookup>> GetLineasGestionAsync(CancellationToken ct = default) => repo.GetLineasGestionAsync(ct);
     public Task<IReadOnlyList<OpcionLookup>> GetAreasAsync(CancellationToken ct = default) => repo.GetAreasAsync(ct);
     public Task<IReadOnlyList<OpcionLookup>> GetEmpresasAsync(CancellationToken ct = default) => repo.GetEmpresasAsync(ct);
     public Task<IReadOnlyList<OpcionLookup>> GetContratasAsync(CancellationToken ct = default) => repo.GetContratasAsync(ct);
     public Task<IReadOnlyList<OpcionLookup>> GetBarriosAsync(CancellationToken ct = default) => repo.GetBarriosAsync(ct);
+    public Task<IReadOnlyList<OpcionLookup>> GetConceptosAsync(CancellationToken ct = default) => repo.GetConceptosAsync(ct);
+    public Task<IReadOnlyList<OpcionLookup>> GetEstadosAutorizanteAsync(CancellationToken ct = default) => repo.GetEstadosAutorizanteAsync(ct);
+    public Task<IReadOnlyList<OpcionLookup>> GetEstadosRedetAsync(CancellationToken ct = default) => repo.GetEstadosRedetAsync(ct);
+    public Task<IReadOnlyList<OpcionLookup>> GetTiposPagoAsync(CancellationToken ct = default) => repo.GetTiposPagoAsync(ct);
+    public Task<IReadOnlyList<OpcionLookup>> GetUsuariosRedeterminacionesAsync(CancellationToken ct = default) => repo.GetUsuariosRedeterminacionesAsync(ct);
+    public Task<IReadOnlyList<OpcionLookup>> GetAutorizantesAsync(IReadOnlyCollection<int>? areaIds, CancellationToken ct = default) => repo.GetAutorizantesAsync(areaIds, ct);
 }

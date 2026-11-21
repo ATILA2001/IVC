@@ -1,0 +1,104 @@
+@page "/legitimos"
+@using IVC.Application.Common
+@using IVC.Application.Redeterminaciones
+@using IVC.Application.Redeterminaciones.Dtos
+@inherits IVC.Components.GridPageBase<IVC.Application.Redeterminaciones.Dtos.LegitimoViewModel>
+
+<PageTitle>Legítimos abonos — IVC</PageTitle>
+
+<RadzenStack>
+    <GridToolbar Titulo="Legítimos abonos"
+                 SizeTitulo="3"
+                 SizeAcciones="9"
+                 OnBuscar="@OnBusquedaChanged"
+                 TextoBusqueda="@_textoBusqueda"
+                 PlaceholderBusqueda="Buscar obra, código, expediente, empresa, barrio, línea o estado…"
+                 LimpiarFiltrosDeshabilitado="@(!HayFiltrosActivos)"
+                 MostrarNuevo="@(CanCreate && _puedeModificar)"
+                 NuevoDeshabilitado="@(_loading || _obras.Count == 0)"
+                 OnNuevo="@NuevoEnVentana"
+                 Exportando="@_exportando"
+                 ExportarDeshabilitado="@ExportarDeshabilitado"
+                 TituloExportarDeshabilitado="@MotivoExportarDeshabilitado"
+                 OnExportar="@ExportarExcel"
+                 OnLimpiarFiltros="@LimpiarFiltros" />
+
+    @if (_loading)
+    {
+        <EstadoCarga Texto="@($"Cargando {TituloEntidad}…")" />
+    }
+    else
+    {
+        <RadzenDataGrid @ref="_grid"
+                        Data="@ItemsVisibles"
+                        TItem="LegitimoViewModel"
+                        Filter="@OnGridFilter"
+                        FilterCleared="@OnGridFilter"
+                        SettingsChanged="@GuardarSettingsGrilla"
+                        LoadSettings="@CargarSettingsGrilla"
+                        AllowFiltering="true"
+                        AllowSorting="true"
+                        AllowColumnResize="true"
+                        FilterMode="FilterMode.CheckBoxList"
+                        ClearFilterText="@GridTextos.LimpiarFiltro"
+                        ApplyFilterText="@GridTextos.AplicarFiltro"
+                        EmptyText="@GridTextos.Vacio"
+                        AllowPaging="false"
+                        AllowVirtualization="true"
+                        Style="height: calc(100vh - 15rem)"
+                        EditMode="DataGridEditMode.Single"
+                        RowEdit="@OnRowEdit"
+                        RowUpdate="@OnRowUpdate">
+            <Columns>
+                <RadzenDataGridColumn TItem="LegitimoViewModel" Property="Obra" Title="Obra" Width="260px" Frozen="true" />
+                <RadzenDataGridColumn TItem="LegitimoViewModel" Property="Area" Title="Área" Width="130px" />
+                <RadzenDataGridColumn TItem="LegitimoViewModel" Property="Barrio" Title="Barrio" Width="140px" />
+                <RadzenDataGridColumn TItem="LegitimoViewModel" Property="Empresa" Title="Empresa" Width="170px" />
+                <RadzenDataGridColumn TItem="LegitimoViewModel" Property="LineaGestion" Title="Línea de gestión" Width="160px" />
+                <RadzenDataGridColumn TItem="LegitimoViewModel" Property="CodigoAutorizante" Title="Código autorizante" Width="150px" />
+                <RadzenDataGridColumn TItem="LegitimoViewModel" Property="Expediente" Title="Expediente" Width="200px">
+                    <EditTemplate Context="item">
+                        <RadzenTextBox @bind-Value="Buffer(item).Expediente" MaxLength="@LegitimoValidator.ExpedienteMaxLength"
+                                       aria-label="Expediente" Style="width:100%" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="LegitimoViewModel" Property="InicioEjecucion" Title="Inicio ejecución" Width="120px" FormatString="{0:dd/MM/yyyy}" />
+                <RadzenDataGridColumn TItem="LegitimoViewModel" Property="FinEjecucion" Title="Fin ejecución" Width="120px" FormatString="{0:dd/MM/yyyy}" />
+                <RadzenDataGridColumn TItem="LegitimoViewModel" Property="Certificado" Title="Monto certificado" Width="150px" FormatString="{0:N2}" TextAlign="TextAlign.Right">
+                    <EditTemplate Context="item">
+                        <RadzenNumeric TValue="decimal?" @bind-Value="Buffer(item).Certificado" Format="N2" Min="0"
+                                       aria-label="Monto certificado" class="@GetValidationCssClass(Buffer(item).Certificado is >= 0)" Style="width:100%" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="LegitimoViewModel" Property="MesAprobacion" Title="Mes aprobación" Width="120px" FormatString="{0:MM/yyyy}" />
+                <RadzenDataGridColumn TItem="LegitimoViewModel" Property="Estado" Title="Estado" Width="120px" />
+                <RadzenDataGridColumn TItem="LegitimoViewModel" Property="Sigaf" Title="SIGAF" Width="140px" FormatString="{0:N2}" TextAlign="TextAlign.Right" />
+                <RadzenDataGridColumn TItem="LegitimoViewModel" Property="BuzonSade" Title="Buzón SADE" Width="220px" />
+                <RadzenDataGridColumn TItem="LegitimoViewModel" Property="FechaSade" Title="Fecha SADE" Width="120px" FormatString="{0:dd/MM/yyyy}" />
+                @if (CanEdit || CanDelete || CanCreate)
+                {
+                    <RadzenDataGridColumn TItem="LegitimoViewModel" Title="Acciones" Width="190px" Frozen="true" FrozenPosition="FrozenColumnPosition.Right" Filterable="false" Sortable="false">
+                        <Template Context="item">
+                            <AccionesFila MostrarEditar="@(CanEdit && _puedeInline)"
+                                          MostrarEliminar="@(CanDelete && _puedeModificar)"
+                                          OnEditar="@(() => _grid.EditRow(item))"
+                                          OnEditarEnVentana="@(CanEdit && _puedeModificar ? EventCallback.Factory.Create(this, () => EditarEnVentana(item)) : default)"
+                                          OnEliminar="@(() => DeleteRow(item))"
+                                          OnHistorial="@(() => VerHistorial(item))" />
+                        </Template>
+                        <EditTemplate Context="item">
+                            <AccionesFila Edicion="true"
+                                          OnGuardar="@(() => GuardarFila(item))"
+                                          OnCancelar="@(() => CancelEdit(item))" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                }
+            </Columns>
+            <FooterTemplate>
+                <GridFooterTotales Filas="@(_grid?.View?.Count() ?? 0)"
+                                   TotalFilas="@_items.Count"
+                                   Importe="@(_grid?.View?.Sum(x => x.Certificado ?? 0m) ?? 0m)" />
+            </FooterTemplate>
+        </RadzenDataGrid>
+    }
+</RadzenStack>
