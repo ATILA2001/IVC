@@ -177,6 +177,21 @@ public class LegitimoRepository(IDbContextFactory<IvcDbContext> dbFactory) : ILe
         return await Completo(db).FirstOrDefaultAsync(l => l.Id == id, ct);
     }
 
+    public async Task<IReadOnlyList<Legitimo>> GetPorExpedienteAsync(string expediente, IReadOnlyCollection<int>? areaIds, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(expediente)) return Array.Empty<Legitimo>();
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+        // Sólo las columnas del reparto (sin obra ni catálogos). La collation de la base iguala
+        // mayúsculas y espacios finales, como la agrupación del devengado.
+        var query = db.Legitimos.AsNoTracking().Where(l => l.Expediente == expediente);
+        if (areaIds is not null)
+        {
+            if (areaIds.Count == 0) return Array.Empty<Legitimo>();
+            query = query.Where(l => l.Obra != null && areaIds.Contains(l.Obra.AreaId));
+        }
+        return await query.OrderBy(l => l.Id).ToListAsync(ct);
+    }
+
     public async Task AddAsync(Legitimo entity, CancellationToken ct = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);

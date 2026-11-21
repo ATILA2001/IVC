@@ -79,6 +79,10 @@ public class RedeterminacionesValidadoresTests
         StringAssert.Contains(string.Join(" ", LegitimoValidator.Validar(vm)), "anterior al inicio");
         vm.FinEjecucion = new DateTime(2025, 4, 1);
         Assert.AreEqual(0, LegitimoValidator.Validar(vm).Count);
+        vm.Expediente = null;
+        Assert.AreEqual(0, LegitimoValidator.Validar(vm).Count, "el expediente es opcional (hotfix f9f6e7d del legado)");
+        vm.Expediente = new string('X', LegitimoValidator.ExpedienteMaxLength + 1);
+        Assert.AreEqual(1, LegitimoValidator.Validar(vm).Count);
 
         var inline = new LegitimoViewModel { Expediente = "", Certificado = -5m };
         Assert.AreEqual(1, LegitimoValidator.ValidarInline(inline).Count);

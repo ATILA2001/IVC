@@ -46,8 +46,8 @@ public class RedeterminacionesRepositoriesTests
             new Certificado { Id = 3, CodigoAutorizante = "A-2", MontoTotal = 50m, MesAprobacion = new DateTime(2025, 8, 1), PorcEjecFisica = null });
         db.Redeterminaciones.Add(new Redeterminacion { Id = 1, CodigoAutorizante = "B-1", Nro = 1, EtapaId = 12, UsuarioId = 9, Expediente = "EX-R" });
         db.Legitimos.AddRange(
-            new Legitimo { Id = 1, ObraId = 10, CodigoAutorizante = "L-1", Certificado = 100m },
-            new Legitimo { Id = 2, ObraId = 20, CodigoAutorizante = "L-2", Certificado = 5m });
+            new Legitimo { Id = 1, ObraId = 10, CodigoAutorizante = "L-1", Certificado = 100m, Expediente = "EX-L" },
+            new Legitimo { Id = 2, ObraId = 20, CodigoAutorizante = "L-2", Certificado = 5m, Expediente = "EX-L" });
         db.ExpedientesReliq.Add(new ExpedienteReliq { Id = 1, CodigoRedet = "A-1-R1", MesAprobacion = new DateTime(2025, 7, 10), Expediente = "EX-OLD" });
         await db.SaveChangesAsync();
         return new Factory(opciones);
@@ -109,6 +109,17 @@ public class RedeterminacionesRepositoriesTests
         Assert.AreEqual(2, (await repo.GetAllAsync(null)).Count);
         Assert.AreEqual("L-2", (await repo.GetAllAsync([2])).Single().CodigoAutorizante);
         Assert.AreEqual(0, (await repo.GetAllAsync([])).Count);
+    }
+
+    [TestMethod]
+    public async Task Legitimos_HermanosPorExpediente_RespetanLasAreasVisibles()
+    {
+        var repo = new LegitimoRepository(await SembrarAsync());
+        CollectionAssert.AreEqual(new[] { 1, 2 }, (await repo.GetPorExpedienteAsync("EX-L", null)).Select(l => l.Id).ToList());
+        Assert.AreEqual(2, (await repo.GetPorExpedienteAsync("EX-L", [2])).Single().Id);
+        Assert.AreEqual(0, (await repo.GetPorExpedienteAsync("EX-L", [])).Count);
+        Assert.AreEqual(0, (await repo.GetPorExpedienteAsync("OTRO", null)).Count);
+        Assert.AreEqual(0, (await repo.GetPorExpedienteAsync(" ", null)).Count);
     }
 
     [TestMethod]

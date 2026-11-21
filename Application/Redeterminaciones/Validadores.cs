@@ -77,8 +77,9 @@ public static class LegitimoValidator
         if (vm.ObraId <= 0) errores.Add("Elegí la obra.");
         if (string.IsNullOrWhiteSpace(vm.CodigoAutorizante)) errores.Add("El código de autorizante es obligatorio.");
         else Validaciones.Largo(errores, vm.CodigoAutorizante.Trim(), CodigoMaxLength, "El código de autorizante");
-        if (string.IsNullOrWhiteSpace(vm.Expediente)) errores.Add("El expediente es obligatorio.");
-        else Validaciones.Largo(errores, vm.Expediente.Trim(), ExpedienteMaxLength, "El expediente");
+        // El expediente es opcional (hotfix f9f6e7d del legado, 20/11/2026): el legítimo se carga en
+        // planificación antes de tenerlo y queda NO INICIADO hasta que se complete inline.
+        Validaciones.Largo(errores, vm.Expediente?.Trim(), ExpedienteMaxLength, "El expediente");
         if (vm.InicioEjecucion is null) errores.Add("El inicio de ejecución es obligatorio.");
         if (vm.FinEjecucion is null) errores.Add("El fin de ejecución es obligatorio.");
         else if (vm.InicioEjecucion is DateTime inicio && vm.FinEjecucion < inicio) errores.Add("El fin de ejecución no puede ser anterior al inicio.");

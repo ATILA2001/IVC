@@ -41,6 +41,11 @@ public interface ILegitimoRepository
 {
     Task<IReadOnlyList<Legitimo>> GetAllAsync(IReadOnlyCollection<int>? areaIds, CancellationToken ct = default);
     Task<Legitimo?> GetByIdAsync(int id, CancellationToken ct = default);
+    /// <summary>
+    /// Legítimos que comparten el expediente (los "hermanos" con los que se reparte el devengado SIGAF),
+    /// acotados a las áreas visibles para el usuario como <see cref="GetAllAsync"/>; null = sin filtro.
+    /// </summary>
+    Task<IReadOnlyList<Legitimo>> GetPorExpedienteAsync(string expediente, IReadOnlyCollection<int>? areaIds, CancellationToken ct = default);
     Task AddAsync(Legitimo entity, CancellationToken ct = default);
     Task UpdateAsync(Legitimo entity, CancellationToken ct = default);
     Task DeleteAsync(int id, CancellationToken ct = default);

@@ -10,7 +10,7 @@ using Radzen;
 namespace IVC.Components.Pages.Redeterminaciones;
 
 /// <summary>
-/// Legítimos abonos (ex LegitimosEF.aspx). Expediente y monto certificado se editan inline;
+/// Legítimos abonos (ex LegitimosEF.aspx). Expediente (opcional) y monto certificado se editan inline;
 /// alta, edición completa y baja van en ventana y sólo con la planificación abierta. El
 /// administrador ve todo; el resto, las obras de sus áreas.
 /// </summary>
@@ -45,8 +45,9 @@ public partial class Legitimos
     protected override IEnumerable<string?> CamposBusqueda(LegitimoViewModel item) =>
         [item.Obra, item.Area, item.Empresa, item.Barrio, item.LineaGestion, item.CodigoAutorizante, item.Expediente, item.Estado];
 
-    protected override async Task<LegitimoViewModel?> ObtenerFilaAsync(LegitimoViewModel item, CancellationToken ct) =>
-        item.Id != 0 ? await Servicio.GetByIdAsync(item.Id, ct) : null;
+    // El SIGAF se reparte entre los legítimos del mismo expediente: una fila sola no alcanza, se recarga todo.
+    protected override Task<LegitimoViewModel?> ObtenerFilaAsync(LegitimoViewModel item, CancellationToken ct) =>
+        Task.FromResult<LegitimoViewModel?>(null);
 
     protected override LegitimoViewModel NuevaFila() => new()
     {
