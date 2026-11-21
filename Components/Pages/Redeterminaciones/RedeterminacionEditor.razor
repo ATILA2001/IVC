@@ -1,0 +1,138 @@
+@using IVC.Application.Common
+@using IVC.Application.Redeterminaciones
+@using IVC.Application.Redeterminaciones.Dtos
+@* Alta y edición de la redeterminación en ventana. El autorizante se elige sólo en el alta;
+   el código de redeterminación lo calcula la base. El usuario asignado se maneja desde la
+   grilla. Requiere DialogOptions con ShowTitle=false y CssClass "ivc-dialog-panel". *@
+<div style="display: flex; align-items: stretch; min-height: 520px;">
+    <PanelIdentidad Etiqueta="Redeterminación" Titulo="@Titulo" Datos="@Datos" />
+    <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 24px 0 24px;">
+            <RadzenText TextStyle="TextStyle.H6" Style="margin: 0; font-size: 1.15rem;">@(EsAlta ? "Nueva redeterminación" : "Editar redeterminación")</RadzenText>
+            <RadzenButton Icon="close" ButtonStyle="ButtonStyle.Light" Variant="Variant.Text" Size="ButtonSize.Small"
+                          Click="@(() => DialogService.Close(false))" title="Cerrar sin guardar" />
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 20px; padding: 16px 24px 16px 24px;">
+            <RadzenStack Gap="0.85rem">
+                <RadzenRow Gap="1rem">
+                    <RadzenColumn Size="12">
+                        <RadzenStack Gap="0.25rem">
+                            <RadzenFormField Text="Autorizante" Variant="Variant.Outlined" Style="width: 100%;">
+                                @if (EsAlta)
+                                {
+                                    <RadzenDropDown TValue="int?" @bind-Value="Borrador.AutorizanteId" Data="@Autorizantes"
+                                                    TextProperty="@nameof(OpcionLookup.Nombre)" ValueProperty="@nameof(OpcionLookup.Id)"
+                                                    AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                    Placeholder="Elegí el autorizante…"
+                                                    class="@GetValidationCssClass(Borrador.AutorizanteId is > 0)" />
+                                }
+                                else
+                                {
+                                    <RadzenTextBox Value="@Item.CodigoAutorizante" Disabled="true" />
+                                }
+                            </RadzenFormField>
+                            @if (!EsAlta)
+                            {
+                                <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0; color: var(--rz-text-secondary-color);">El autorizante no se cambia al editar.</RadzenText>
+                            }
+                        </RadzenStack>
+                    </RadzenColumn>
+                </RadzenRow>
+                <RadzenRow Gap="1rem">
+                    <RadzenColumn Size="4">
+                        <RadzenFormField Text="Salto" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenDatePicker TValue="DateTime?" @bind-Value="Borrador.Salto" DateFormat="MM/yyyy" ShowDays="false" ShowTime="false"
+                                              class="@GetValidationCssClass(Borrador.Salto is not null)" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                    <RadzenColumn Size="4">
+                        <RadzenFormField Text="Nro" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenNumeric TValue="int?" @bind-Value="Borrador.Nro" Min="0"
+                                           class="@GetValidationCssClass(Borrador.Nro is not null)" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                    <RadzenColumn Size="4">
+                        <RadzenFormField Text="Porcentaje" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenNumeric TValue="decimal?" @bind-Value="Borrador.Porcentaje" Format="N2"
+                                           class="@GetValidationCssClass(Borrador.Porcentaje is not null)" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                </RadzenRow>
+                <RadzenRow Gap="1rem">
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Tipo" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenTextBox @bind-Value="Borrador.Tipo" MaxLength="@RedeterminacionValidator.TipoMaxLength"
+                                           class="@GetValidationCssClass(!string.IsNullOrWhiteSpace(Borrador.Tipo))" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Etapa" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenDropDown TValue="int?" @bind-Value="Borrador.EtapaId" Data="@Etapas"
+                                            TextProperty="@nameof(OpcionLookup.Nombre)" ValueProperty="@nameof(OpcionLookup.Id)"
+                                            AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                            class="@GetValidationCssClass(Borrador.EtapaId is > 0)" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                </RadzenRow>
+                <RadzenRow Gap="1rem">
+                    <RadzenColumn Size="12">
+                        <RadzenFormField Text="Expediente" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenTextBox @bind-Value="Borrador.Expediente" MaxLength="@RedeterminacionValidator.ExpedienteMaxLength"
+                                           class="@GetValidationCssClass(!string.IsNullOrWhiteSpace(Borrador.Expediente))" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                </RadzenRow>
+                <RadzenRow Gap="1rem">
+                    <RadzenColumn Size="12">
+                        <RadzenFormField Text="Observaciones" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenTextArea @bind-Value="Borrador.Observaciones" MaxLength="@RedeterminacionValidator.ObservacionesMaxLength" Rows="2" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                </RadzenRow>
+            </RadzenStack>
+        </div>
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem"
+                     Style="padding: 16px 24px 20px 24px; border-top: 1px solid var(--surface-border, rgba(128,128,128,.25)); margin-top: auto;">
+            <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" Click="@(() => DialogService.Close(false))" />
+            <RadzenButton Text="@(EsAlta ? "Crear redeterminación" : "Guardar cambios")" ButtonStyle="ButtonStyle.Primary"
+                          Click="@Guardar" IsBusy="@_guardando" BusyText="@(EsAlta ? "Creando..." : "Guardando...")" />
+        </RadzenStack>
+    </div>
+</div>
+
+@code {
+    [Inject] private DialogService DialogService { get; set; } = null!;
+
+    [Parameter, EditorRequired] public RedeterminacionViewModel Item { get; set; } = null!;
+    [Parameter, EditorRequired] public RedeterminacionViewModel Borrador { get; set; } = null!;
+    [Parameter] public bool EsAlta { get; set; }
+    [Parameter] public IReadOnlyList<OpcionLookup> Autorizantes { get; set; } = [];
+    [Parameter] public IReadOnlyList<OpcionLookup> Etapas { get; set; } = [];
+    [Parameter, EditorRequired] public Func<Task<bool>> GuardarAsync { get; set; } = null!;
+
+    private bool _guardando;
+
+    private string? Titulo => EsAlta ? "Código: lo asigna la base" : Item.CodigoRedet;
+
+    private IReadOnlyList<PanelIdentidad.Dato> Datos =>
+    [
+        new("Autorizante", EsAlta ? Autorizantes.FirstOrDefault(a => a.Id == Borrador.AutorizanteId)?.Nombre : Item.CodigoAutorizante),
+        new("Obra", Item.Obra),
+        new("Empresa", Item.Empresa),
+        new("Área", Item.Area),
+        new("Usuario asignado", Item.Usuario),
+    ];
+
+    private async Task Guardar()
+    {
+        _guardando = true;
+        try
+        {
+            if (await GuardarAsync()) DialogService.Close(true);
+        }
+        finally
+        {
+            _guardando = false;
+        }
+    }
+}

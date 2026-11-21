@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Radzen;
 using IVC.Data;
 using IVC.Repositories.Abstractions;
@@ -151,6 +152,20 @@ public static class IvcBuilderExtensions
         // Obras (fase 5): indicadores calculados sobre autorizantes, certificados y legítimos.
         builder.Services.AddTransient<IObraRepository, ObraRepository>();
         builder.Services.AddScoped<IObrasService, ObrasService>();
+
+        // Redeterminaciones (fase 6): datos externos (SADE, SIGAF, ACDIR) y los cuatro agregados.
+        builder.Services.AddTransient<IDatosExternosRepository, DatosExternosRepository>();
+        builder.Services.AddTransient<IAutorizanteRepository, AutorizanteRepository>();
+        builder.Services.AddTransient<ICertificadoRepository, CertificadoRepository>();
+        builder.Services.AddTransient<ILegitimoRepository, LegitimoRepository>();
+        builder.Services.AddTransient<IRedeterminacionRepository, RedeterminacionRepository>();
+        builder.Services.AddTransient<IExpedienteReliqRepository, ExpedienteReliqRepository>();
+        builder.Services.AddScoped<IDatosExternosService, DatosExternosService>();
+        builder.Services.AddScoped<IAutorizantesService, AutorizantesService>();
+        builder.Services.AddScoped<ICertificadosService, CertificadosService>();
+        builder.Services.AddScoped<ILegitimosService, LegitimosService>();
+        builder.Services.AddScoped<IRedeterminacionesService, RedeterminacionesService>();
+        builder.Services.TryAddSingleton(TimeProvider.System);
 
         // Identidad IVC: el usuario se construye una vez por circuito (reemplaza a Session["Usuario"]).
         builder.Services.AddScoped<IUsuarioIvcFactory, UsuarioIvcFactory>();

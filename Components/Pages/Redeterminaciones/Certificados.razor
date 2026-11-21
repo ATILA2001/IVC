@@ -1,0 +1,139 @@
+@page "/certificados"
+@using IVC.Application.Common
+@using IVC.Application.Redeterminaciones
+@using IVC.Application.Redeterminaciones.Dtos
+@inherits IVC.Components.GridPageBase<IVC.Application.Redeterminaciones.Dtos.CertificadoViewModel>
+
+<PageTitle>Certificados — IVC</PageTitle>
+
+<RadzenStack>
+    <GridToolbar Titulo="Certificados"
+                 SizeTitulo="3"
+                 SizeAcciones="9"
+                 OnBuscar="@OnBusquedaChanged"
+                 TextoBusqueda="@_textoBusqueda"
+                 PlaceholderBusqueda="Buscar obra, código, expediente, empresa, proyecto, tipo o estado…"
+                 LimpiarFiltrosDeshabilitado="@(!HayFiltrosActivos)"
+                 MostrarNuevo="@(CanCreate && _puedeModificar)"
+                 NuevoDeshabilitado="@(_loading || _autorizantes.Count == 0)"
+                 OnNuevo="@NuevoEnVentana"
+                 Exportando="@_exportando"
+                 ExportarDeshabilitado="@ExportarDeshabilitado"
+                 TituloExportarDeshabilitado="@MotivoExportarDeshabilitado"
+                 OnExportar="@ExportarExcel"
+                 OnLimpiarFiltros="@LimpiarFiltros" />
+
+    @if (_loading)
+    {
+        <EstadoCarga Texto="@($"Cargando {TituloEntidad}…")" />
+    }
+    else
+    {
+        <RadzenDataGrid @ref="_grid"
+                        Data="@ItemsVisibles"
+                        TItem="CertificadoViewModel"
+                        Filter="@OnGridFilter"
+                        FilterCleared="@OnGridFilter"
+                        SettingsChanged="@GuardarSettingsGrilla"
+                        LoadSettings="@CargarSettingsGrilla"
+                        AllowFiltering="true"
+                        AllowSorting="true"
+                        AllowColumnResize="true"
+                        FilterMode="FilterMode.CheckBoxList"
+                        ClearFilterText="@GridTextos.LimpiarFiltro"
+                        ApplyFilterText="@GridTextos.AplicarFiltro"
+                        EmptyText="@GridTextos.Vacio"
+                        AllowPaging="false"
+                        AllowVirtualization="true"
+                        Style="height: calc(100vh - 15rem)"
+                        EditMode="DataGridEditMode.Single"
+                        RowEdit="@OnRowEdit"
+                        RowUpdate="@OnRowUpdate">
+            <Columns>
+                <RadzenDataGridColumn TItem="CertificadoViewModel" Property="Obra" Title="Obra" Width="240px" Frozen="true" />
+                <RadzenDataGridColumn TItem="CertificadoViewModel" Property="CodigoAutorizante" Title="Código" Width="140px" Frozen="true">
+                    <Template Context="item">
+                        @if (item.EsReliquidacion)
+                        {
+                            <span title="Reliquidación (fila calculada a partir de la redeterminación)">@item.CodigoAutorizante <RadzenIcon Icon="calculate" Style="font-size: 1rem; vertical-align: middle; color: var(--rz-text-secondary-color);" /></span>
+                        }
+                        else
+                        {
+                            @item.CodigoAutorizante
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="CertificadoViewModel" Property="Area" Title="Área" Width="120px" />
+                <RadzenDataGridColumn TItem="CertificadoViewModel" Property="Contrata" Title="Contrata" Width="140px" />
+                <RadzenDataGridColumn TItem="CertificadoViewModel" Property="Barrio" Title="Barrio" Width="130px" />
+                <RadzenDataGridColumn TItem="CertificadoViewModel" Property="Proyecto" Title="Proyecto" Width="160px" />
+                <RadzenDataGridColumn TItem="CertificadoViewModel" Property="Empresa" Title="Empresa" Width="160px" />
+                <RadzenDataGridColumn TItem="CertificadoViewModel" Property="AutorizanteEstado" Title="Estado autorizante" Width="150px" />
+                <RadzenDataGridColumn TItem="CertificadoViewModel" Property="ExpedientePago" Title="Expediente" Width="200px">
+                    <EditTemplate Context="item">
+                        <RadzenTextBox @bind-Value="Buffer(item).ExpedientePago" MaxLength="@CertificadoValidator.ExpedienteMaxLength"
+                                       aria-label="Expediente" Style="width:100%" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="CertificadoViewModel" Property="Estado" Title="Estado pago" Width="120px" />
+                <RadzenDataGridColumn TItem="CertificadoViewModel" Property="TipoPago" Title="Tipo" Width="140px" />
+                <RadzenDataGridColumn TItem="CertificadoViewModel" Property="MontoTotal" Title="Monto certificado" Width="150px" FormatString="{0:N2}" TextAlign="TextAlign.Right">
+                    <EditTemplate Context="item">
+                        @if (item.EsReliquidacion)
+                        {
+                            @item.MontoTotal?.ToString("N2")
+                        }
+                        else
+                        {
+                            <RadzenNumeric TValue="decimal?" @bind-Value="Buffer(item).MontoTotal" Format="N2" Min="0"
+                                           aria-label="Monto certificado" class="@GetValidationCssClass(Buffer(item).MontoTotal is >= 0)" Style="width:100%" />
+                        }
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="CertificadoViewModel" Property="MesAprobacion" Title="Mes certificado" Width="120px" FormatString="{0:MM/yyyy}" />
+                <RadzenDataGridColumn TItem="CertificadoViewModel" Property="LineaGestion" Title="Línea de gestión" Width="160px" />
+                <RadzenDataGridColumn TItem="CertificadoViewModel" Property="Porcentaje" Title="Porcentaje" Width="110px" FormatString="{0:N2} %" TextAlign="TextAlign.Right" />
+                <RadzenDataGridColumn TItem="CertificadoViewModel" Property="PorcEjecFisica" Title="Ejec. física (%)" Width="120px" FormatString="{0:N2} %" TextAlign="TextAlign.Right">
+                    <EditTemplate Context="item">
+                        @if (item.EsReliquidacion)
+                        {
+                            @item.PorcEjecFisica?.ToString("N2")
+                        }
+                        else
+                        {
+                            <RadzenNumeric TValue="decimal?" @bind-Value="Buffer(item).PorcEjecFisica" Format="N2" Min="0" Max="100"
+                                           aria-label="Ejecución física" Style="width:100%" />
+                        }
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="CertificadoViewModel" Property="Sigaf" Title="SIGAF" Width="140px" FormatString="{0:N2}" TextAlign="TextAlign.Right" />
+                <RadzenDataGridColumn TItem="CertificadoViewModel" Property="BuzonSade" Title="Buzón SADE" Width="220px" />
+                <RadzenDataGridColumn TItem="CertificadoViewModel" Property="FechaSade" Title="Fecha SADE" Width="120px" FormatString="{0:dd/MM/yyyy}" />
+                @if (CanEdit || CanDelete || CanCreate)
+                {
+                    <RadzenDataGridColumn TItem="CertificadoViewModel" Title="Acciones" Width="190px" Frozen="true" FrozenPosition="FrozenColumnPosition.Right" Filterable="false" Sortable="false">
+                        <Template Context="item">
+                            @* La reliquidación sólo admite el expediente inline: no se edita en ventana ni se elimina. *@
+                            <AccionesFila MostrarEditar="@(CanEdit && _puedeInline)"
+                                          MostrarEliminar="@(CanDelete && _puedeModificar && !item.EsReliquidacion)"
+                                          OnEditar="@(() => _grid.EditRow(item))"
+                                          OnEditarEnVentana="@(CanEdit && _puedeModificar && !item.EsReliquidacion ? EventCallback.Factory.Create(this, () => EditarEnVentana(item)) : default)"
+                                          OnEliminar="@(() => DeleteRow(item))"
+                                          OnHistorial="@(() => VerHistorial(item))" />
+                        </Template>
+                        <EditTemplate Context="item">
+                            <AccionesFila Edicion="true"
+                                          OnGuardar="@(() => GuardarFila(item))"
+                                          OnCancelar="@(() => CancelEdit(item))" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                }
+            </Columns>
+            <FooterTemplate>
+                <GridFooterTotales Filas="@(_grid?.View?.Count() ?? 0)"
+                                   TotalFilas="@_items.Count"
+                                   Importe="@(_grid?.View?.Sum(x => x.MontoTotal ?? 0m) ?? 0m)" />
+            </FooterTemplate>
+        </RadzenDataGrid>
+    }
+</RadzenStack>
