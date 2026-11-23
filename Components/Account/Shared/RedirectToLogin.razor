@@ -5,7 +5,8 @@
 @code {
     protected override void OnInitialized()
     {
-        var returnUrl = Uri.EscapeDataString(Navigation.Uri);
+        // Ruta relativa de la app (no la URI absoluta): es lo único que Login reenvía a Auth.Web.
+        var returnUrl = Uri.EscapeDataString("/" + Navigation.ToBaseRelativePath(Navigation.Uri));
         Navigation.NavigateTo($"Account/Login?returnUrl={returnUrl}", forceLoad: true);
     }
 }

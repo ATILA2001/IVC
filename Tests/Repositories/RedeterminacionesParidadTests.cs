@@ -15,7 +15,7 @@ namespace Tests.Repositories;
 /// Paridad del módulo de redeterminaciones contra una base IVC real (sólo lectura): los
 /// cuatro servicios, con sus repositorios reales y un administrador, se comparan fila por
 /// fila con las vistas del Power BI (vw_PBI_Redeterminaciones, vw_PBI_Reliquidaciones y
-/// vw_PBI_Pagos de Database/vw_PowerBI_Redeterminaciones.sql del legado), que implementan
+/// vw_PBI_Pagos de Database/002_vw_PowerBI_Redeterminaciones.sql de este repo), que implementan
 /// las mismas reglas R1–R7 en SQL. Corre sólo con IVC_TEST_CONNECTION y exige que las
 /// vistas existan en esa base.
 /// </summary>
