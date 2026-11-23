@@ -1,0 +1,98 @@
+@page "/formulacion"
+@using IVC.Application.Formulacion.Dtos
+@inherits IVC.Components.GridPageBase<IVC.Application.Formulacion.Dtos.FormulacionViewModel>
+
+<PageTitle>Formulación — IVC</PageTitle>
+
+<RadzenStack>
+    <GridToolbar Titulo="Formulación"
+                 SizeTitulo="3"
+                 SizeAcciones="9"
+                 OnBuscar="@OnBusquedaChanged"
+                 TextoBusqueda="@_textoBusqueda"
+                 PlaceholderBusqueda="Buscar obra, empresa, contrata, barrio, proyecto, línea, prioridad u observaciones…"
+                 LimpiarFiltrosDeshabilitado="@(!HayFiltrosActivos)"
+                 MostrarNuevo="@(CanCreate && _puedeModificar)"
+                 NuevoDeshabilitado="@_loading"
+                 OnNuevo="@NuevoEnVentana"
+                 Exportando="@_exportando"
+                 ExportarDeshabilitado="@ExportarDeshabilitado"
+                 TituloExportarDeshabilitado="@MotivoExportarDeshabilitado"
+                 OnExportar="@ExportarFormulacion"
+                 OnLimpiarFiltros="@LimpiarFiltros">
+        <Contexto>
+            <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0; color: var(--rz-text-secondary-color);">
+                Ciclo @Anios[0]–@Anios[2]
+            </RadzenText>
+        </Contexto>
+    </GridToolbar>
+
+    @if (_loading)
+    {
+        <EstadoCarga Texto="@($"Cargando {TituloEntidad}…")" />
+    }
+    else
+    {
+        <RadzenDataGrid @ref="_grid"
+                        Data="@ItemsVisibles"
+                        TItem="FormulacionViewModel"
+                        Filter="@OnGridFilter"
+                        FilterCleared="@OnGridFilter"
+                        SettingsChanged="@GuardarSettingsGrilla"
+                        LoadSettings="@CargarSettingsGrilla"
+                        AllowFiltering="true"
+                        AllowSorting="true"
+                        AllowColumnResize="true"
+                        FilterMode="FilterMode.CheckBoxList"
+                        ClearFilterText="@GridTextos.LimpiarFiltro"
+                        ApplyFilterText="@GridTextos.AplicarFiltro"
+                        EmptyText="@GridTextos.Vacio"
+                        AllowPaging="false"
+                        AllowVirtualization="true"
+                        Style="height: calc(100vh - 15rem)">
+            <Columns>
+                <RadzenDataGridColumn TItem="FormulacionViewModel" Property="Obra" Title="Nombre de obra" Width="280px" Frozen="true" />
+                <RadzenDataGridColumn TItem="FormulacionViewModel" Property="Area" Title="Área" Width="140px" />
+                <RadzenDataGridColumn TItem="FormulacionViewModel" Property="Empresa" Title="Empresa" Width="180px" />
+                <RadzenDataGridColumn TItem="FormulacionViewModel" Property="Contrata" Title="Contrata" Width="170px" />
+                <RadzenDataGridColumn TItem="FormulacionViewModel" Property="Barrio" Title="Barrio" Width="150px" />
+                <RadzenDataGridColumn TItem="FormulacionViewModel" Property="LineaGestion" Title="Línea de gestión" Width="180px" />
+                <RadzenDataGridColumn TItem="FormulacionViewModel" Property="Proyecto" Title="Proyecto" Width="180px" />
+                <RadzenDataGridColumn TItem="FormulacionViewModel" Property="BreveDescripcion" Title="Breve descripción" Width="260px" />
+                <RadzenDataGridColumn TItem="FormulacionViewModel" Property="FechaInicio" Title="Fecha inicio" Width="120px" FormatString="{0:dd/MM/yyyy}" />
+                <RadzenDataGridColumn TItem="FormulacionViewModel" Property="FechaFin" Title="Fecha fin" Width="120px" FormatString="{0:dd/MM/yyyy}" />
+                @* PPI: sólo el administrador, como en el legado. *@
+                <RadzenDataGridColumn TItem="FormulacionViewModel" Property="Ppi" Title="PPI" Width="100px" TextAlign="TextAlign.Right" Visible="@_esAdmin" />
+                <RadzenDataGridColumn TItem="FormulacionViewModel" Property="Techos" Title="Techo" Width="150px" FormatString="{0:N2}" TextAlign="TextAlign.Right" />
+                <RadzenDataGridColumn TItem="FormulacionViewModel" Property="MontoAnio1" Title="@($"Monto {Anios[0]}")" Width="150px" FormatString="{0:N2}" TextAlign="TextAlign.Right" />
+                <RadzenDataGridColumn TItem="FormulacionViewModel" Property="MontoAnio2" Title="@($"Monto {Anios[1]}")" Width="150px" FormatString="{0:N2}" TextAlign="TextAlign.Right" />
+                <RadzenDataGridColumn TItem="FormulacionViewModel" Property="MontoAnio3" Title="@($"Monto {Anios[2]}")" Width="150px" FormatString="{0:N2}" TextAlign="TextAlign.Right" />
+                <RadzenDataGridColumn TItem="FormulacionViewModel" Property="MesBase" Title="Mes base" Width="120px" FormatString="{0:dd/MM/yyyy}" />
+                <RadzenDataGridColumn TItem="FormulacionViewModel" Property="UnidadMedida" Title="Unidad de medida" Width="160px" />
+                <RadzenDataGridColumn TItem="FormulacionViewModel" Property="ValorMedida" Title="Valor de medida" Width="140px" FormatString="{0:N2}" TextAlign="TextAlign.Right" />
+                <RadzenDataGridColumn TItem="FormulacionViewModel" Property="Observaciones" Title="Observaciones" Width="260px" />
+                <RadzenDataGridColumn TItem="FormulacionViewModel" Property="Prioridad" Title="Prioridad" Width="130px" />
+                @if (CanEdit || CanDelete || CanCreate)
+                {
+                    <RadzenDataGridColumn TItem="FormulacionViewModel" Title="Acciones" Width="150px" Frozen="true" FrozenPosition="FrozenColumnPosition.Right" Filterable="false" Sortable="false">
+                        <Template Context="item">
+                            @* Sin edición inline: la formulación se edita en ventana, como el modal del legado.
+                               Con la formulación cerrada sólo queda el historial. *@
+                            <AccionesFila MostrarEditar="@(CanEdit && _puedeModificar)"
+                                          MostrarEliminar="@(CanDelete && _puedeModificar)"
+                                          OnEditar="@(() => EditarEnVentana(item))"
+                                          OnEliminar="@(() => DeleteRow(item))"
+                                          OnHistorial="@(() => VerHistorialFormulacion(item))" />
+                        </Template>
+                    </RadzenDataGridColumn>
+                }
+            </Columns>
+            <FooterTemplate>
+                @* Subtotal del legado: suma de los tres años de las obras a la vista. *@
+                <GridFooterTotales Filas="@(_grid?.View?.Count() ?? 0)"
+                                   TotalFilas="@_items.Count"
+                                   Importe="@(_grid?.View?.Sum(x => x.TotalMonto) ?? 0m)" />
+            </FooterTemplate>
+        </RadzenDataGrid>
+    }
+</RadzenStack>

@@ -167,6 +167,12 @@ public static class IvcBuilderExtensions
         builder.Services.AddScoped<IRedeterminacionesService, RedeterminacionesService>();
         builder.Services.TryAddSingleton(TimeProvider.System);
 
+        // Formulación (fase 7): pivot de tres años por obra; el año base viene de appsettings.
+        builder.Services.Configure<IVC.Application.Formulacion.FormulacionOptions>(
+            builder.Configuration.GetSection(IVC.Application.Formulacion.FormulacionOptions.Seccion));
+        builder.Services.AddTransient<IFormulacionRepository, FormulacionRepository>();
+        builder.Services.AddScoped<IFormulacionService, FormulacionService>();
+
         // Identidad IVC: el usuario se construye una vez por circuito (reemplaza a Session["Usuario"]).
         builder.Services.AddScoped<IUsuarioIvcFactory, UsuarioIvcFactory>();
         builder.Services.AddScoped<IUsuarioActual, UsuarioActualService>();

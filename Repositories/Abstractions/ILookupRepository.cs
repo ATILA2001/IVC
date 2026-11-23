@@ -12,6 +12,10 @@ public interface ILookupRepository
     Task<IReadOnlyList<OpcionLookup>> GetObrasAsync(IReadOnlyCollection<int>? areaIds, CancellationToken ct = default);
     /// <summary>Obras que todavía no tienen fila en BD_PROYECTOS (alta de proyecto); el texto agrega la empresa.</summary>
     Task<IReadOnlyList<OpcionLookup>> GetObrasSinProyectoAsync(CancellationToken ct = default);
+    /// <summary>Obras sin formulación en los años del ciclo, de las áreas indicadas (null = todas). Alta de Formulación.</summary>
+    Task<IReadOnlyList<OpcionLookup>> GetObrasSinFormulacionAsync(IReadOnlyCollection<int> anios, IReadOnlyCollection<int>? areaIds, CancellationToken ct = default);
+    Task<IReadOnlyList<OpcionLookup>> GetUnidadesMedidaAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<OpcionLookup>> GetPrioridadesAsync(CancellationToken ct = default);
     Task<IReadOnlyList<OpcionLookup>> GetLineasGestionAsync(CancellationToken ct = default);
     Task<IReadOnlyList<OpcionLookup>> GetAreasAsync(CancellationToken ct = default);
     Task<IReadOnlyList<OpcionLookup>> GetEmpresasAsync(CancellationToken ct = default);

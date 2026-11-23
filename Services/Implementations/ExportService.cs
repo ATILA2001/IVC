@@ -13,7 +13,7 @@ public class ExportService : IExportService
     private const string FormatoFechaHora = "dd/MM/yyyy HH:mm";
     private const string FormatoImporte = "#,##0.00";
 
-    public byte[] ExportToXlsx<T>(IReadOnlyList<T> data, string sheetName)
+    public byte[] ExportToXlsx<T>(IReadOnlyList<T> data, string sheetName, IReadOnlyDictionary<string, string>? titulos = null)
     {
         using var wb = new XLWorkbook();
         var ws = wb.Worksheets.Add(sheetName);
@@ -26,7 +26,9 @@ public class ExportService : IExportService
 
         // Header row
         for (int i = 0; i < props.Length; i++)
-            ws.Cell(1, i + 1).Value = props[i].GetCustomAttribute<DisplayAttribute>()?.Name ?? props[i].Name;
+            ws.Cell(1, i + 1).Value = titulos is not null && titulos.TryGetValue(props[i].Name, out var titulo)
+                ? titulo
+                : props[i].GetCustomAttribute<DisplayAttribute>()?.Name ?? props[i].Name;
 
         // Data rows
         for (int row = 0; row < data.Count; row++)
