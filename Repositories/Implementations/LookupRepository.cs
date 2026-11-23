@@ -33,6 +33,33 @@ public class LookupRepository(IDbContextFactory<IvcDbContext> dbFactory) : ILook
             .OrderBy(x => x.Nombre, StringComparer.CurrentCultureIgnoreCase).ToList();
     }
 
+    public async Task<IReadOnlyList<OpcionLookup>> GetObrasSinFormulacionAsync(IReadOnlyCollection<int> anios, IReadOnlyCollection<int>? areaIds, CancellationToken ct = default)
+    {
+        if (anios.Count == 0 || areaIds is { Count: 0 }) return Array.Empty<OpcionLookup>();
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+        var query = db.Obras.AsNoTracking()
+            .Include(o => o.Barrio).Include(o => o.Contrata).Include(o => o.Empresa)
+            .Where(o => !db.Formulaciones.Any(f => f.ObraId == o.Id && anios.Contains(f.FechaPeriodo.Year)));
+        if (areaIds is not null) query = query.Where(o => areaIds.Contains(o.AreaId));
+        var obras = await query.ToListAsync(ct);
+        return obras.Select(o => new OpcionLookup(o.Id, TextoObra(o, conEmpresa: true)))
+            .OrderBy(x => x.Nombre, StringComparer.CurrentCultureIgnoreCase).ToList();
+    }
+
+    public async Task<IReadOnlyList<OpcionLookup>> GetUnidadesMedidaAsync(CancellationToken ct = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+        return await db.UnidadesMedida.AsNoTracking().OrderBy(u => u.Nombre)
+            .Select(u => new OpcionLookup(u.Id, u.Nombre ?? string.Empty)).ToListAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<OpcionLookup>> GetPrioridadesAsync(CancellationToken ct = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+        return await db.Prioridades.AsNoTracking().OrderBy(p => p.Nombre)
+            .Select(p => new OpcionLookup(p.Id, p.Nombre ?? string.Empty)).ToListAsync(ct);
+    }
+
     public async Task<IReadOnlyList<OpcionLookup>> GetLineasGestionAsync(CancellationToken ct = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);

@@ -1,0 +1,189 @@
+@using IVC.Application.Common
+@using IVC.Application.Formulacion
+@using IVC.Application.Formulacion.Dtos
+@* Alta y edición de la formulación de una obra en ventana (reemplaza al modal del legado):
+   los tres montos del ciclo y los campos compartidos. La obra se elige sólo en el alta, entre
+   las que todavía no tienen formulación en el ciclo. El PPI y el techo los ve y edita sólo
+   el administrador (el panel oculto del legado); el resto conserva los valores existentes.
+   Requiere DialogOptions con ShowTitle=false y CssClass "ivc-dialog-panel". *@
+<div style="display: flex; align-items: stretch; min-height: 560px;">
+    <PanelIdentidad Etiqueta="Formulación" Titulo="@Titulo" Datos="@Datos" />
+    <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 24px 0 24px;">
+            <RadzenText TextStyle="TextStyle.H6" Style="margin: 0; font-size: 1.15rem;">@(EsAlta ? "Nueva formulación" : "Editar formulación")</RadzenText>
+            <RadzenButton Icon="close" ButtonStyle="ButtonStyle.Light" Variant="Variant.Text" Size="ButtonSize.Small"
+                          Click="@(() => DialogService.Close(false))" title="Cerrar sin guardar" />
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 20px; padding: 16px 24px 16px 24px;">
+            <RadzenStack Gap="0.85rem">
+                @if (EsAlta)
+                {
+                    <RadzenRow Gap="1rem">
+                        <RadzenColumn Size="12">
+                            <RadzenFormField Text="Obra" Variant="Variant.Outlined" Style="width: 100%;">
+                                <RadzenDropDown TValue="int" @bind-Value="Borrador.ObraId" Data="@Obras"
+                                                TextProperty="@nameof(OpcionLookup.Nombre)" ValueProperty="@nameof(OpcionLookup.Id)"
+                                                AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                Placeholder="Elegí la obra (sólo las que aún no tienen formulación)…"
+                                                class="@GetValidationCssClass(Borrador.ObraId > 0)" />
+                            </RadzenFormField>
+                        </RadzenColumn>
+                    </RadzenRow>
+                }
+                <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin: 0;">Montos del ciclo (al menos uno)</RadzenText>
+                <RadzenRow Gap="1rem">
+                    <RadzenColumn Size="4">
+                        <RadzenFormField Text="@($"Monto {Anios[0]}")" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenNumeric TValue="decimal?" @bind-Value="Borrador.MontoAnio1" Format="N2" Min="0"
+                                           class="@GetValidationCssClass(HayAlgunMonto && Borrador.MontoAnio1 is null or >= 0)" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                    <RadzenColumn Size="4">
+                        <RadzenFormField Text="@($"Monto {Anios[1]}")" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenNumeric TValue="decimal?" @bind-Value="Borrador.MontoAnio2" Format="N2" Min="0"
+                                           class="@GetValidationCssClass(HayAlgunMonto && Borrador.MontoAnio2 is null or >= 0)" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                    <RadzenColumn Size="4">
+                        <RadzenFormField Text="@($"Monto {Anios[2]}")" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenNumeric TValue="decimal?" @bind-Value="Borrador.MontoAnio3" Format="N2" Min="0"
+                                           class="@GetValidationCssClass(HayAlgunMonto && Borrador.MontoAnio3 is null or >= 0)" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                </RadzenRow>
+                <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0; color: var(--rz-text-secondary-color);">
+                    Un año sin monto no se guarda: si la obra ya lo tenía cargado, se elimina.
+                </RadzenText>
+            </RadzenStack>
+            <RadzenStack Gap="0.85rem">
+                <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin: 0;">Datos compartidos por los tres años</RadzenText>
+                <RadzenRow Gap="1rem">
+                    @if (EsAdmin)
+                    {
+                        <RadzenColumn Size="3">
+                            <RadzenFormField Text="PPI" Variant="Variant.Outlined" Style="width: 100%;">
+                                <RadzenNumeric TValue="int?" @bind-Value="Borrador.Ppi" Min="0" />
+                            </RadzenFormField>
+                        </RadzenColumn>
+                        <RadzenColumn Size="3">
+                            <RadzenFormField Text="Techo" Variant="Variant.Outlined" Style="width: 100%;">
+                                <RadzenNumeric TValue="decimal?" @bind-Value="Borrador.Techos" Format="N2" Min="0" />
+                            </RadzenFormField>
+                        </RadzenColumn>
+                    }
+                    <RadzenColumn Size="@(EsAdmin ? 3 : 6)">
+                        <RadzenFormField Text="Mes base" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenDatePicker TValue="DateTime?" @bind-Value="Borrador.MesBase" DateFormat="dd/MM/yyyy" ShowTime="false" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                    <RadzenColumn Size="@(EsAdmin ? 3 : 6)">
+                        <RadzenFormField Text="Prioridad" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenDropDown TValue="int?" @bind-Value="Borrador.PrioridadId" Data="@Prioridades"
+                                            TextProperty="@nameof(OpcionLookup.Nombre)" ValueProperty="@nameof(OpcionLookup.Id)"
+                                            class="@GetValidationCssClass(Borrador.PrioridadId is > 0)" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                </RadzenRow>
+                <RadzenRow Gap="1rem">
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Unidad de medida" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenDropDown TValue="int?" @bind-Value="Borrador.UnidadMedidaId" Data="@Unidades"
+                                            TextProperty="@nameof(OpcionLookup.Nombre)" ValueProperty="@nameof(OpcionLookup.Id)"
+                                            AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                            class="@GetValidationCssClass(Borrador.UnidadMedidaId is > 0)" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Valor de medida" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenNumeric TValue="decimal?" @bind-Value="Borrador.ValorMedida" Format="N2" Min="0"
+                                           class="@GetValidationCssClass(Borrador.ValorMedida is >= 0)" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                </RadzenRow>
+                <RadzenRow Gap="1rem">
+                    <RadzenColumn Size="12">
+                        <RadzenFormField Text="@($"Breve descripción (máximo {FormulacionValidator.BreveDescripcionMaxLength} caracteres)")" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenTextArea @bind-Value="Borrador.BreveDescripcion" MaxLength="@FormulacionValidator.BreveDescripcionMaxLength" Rows="2" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                </RadzenRow>
+                <RadzenRow Gap="1rem">
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Fecha inicio" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenDatePicker TValue="DateTime?" @bind-Value="Borrador.FechaInicio" DateFormat="dd/MM/yyyy" ShowTime="false" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Fecha fin" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenDatePicker TValue="DateTime?" @bind-Value="Borrador.FechaFin" DateFormat="dd/MM/yyyy" ShowTime="false" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                </RadzenRow>
+                <RadzenRow Gap="1rem">
+                    <RadzenColumn Size="12">
+                        <RadzenFormField Text="@($"Observaciones (máximo {FormulacionValidator.ObservacionesMaxLength} caracteres)")" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenTextArea @bind-Value="Borrador.Observaciones" MaxLength="@FormulacionValidator.ObservacionesMaxLength" Rows="3" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                </RadzenRow>
+            </RadzenStack>
+        </div>
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem"
+                     Style="padding: 16px 24px 20px 24px; border-top: 1px solid var(--surface-border, rgba(128,128,128,.25)); margin-top: auto;">
+            <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" Click="@(() => DialogService.Close(false))" />
+            <RadzenButton Text="@(EsAlta ? "Crear formulación" : "Guardar cambios")" ButtonStyle="ButtonStyle.Primary"
+                          Click="@Guardar" IsBusy="@_guardando" BusyText="@(EsAlta ? "Creando..." : "Guardando...")" />
+        </RadzenStack>
+    </div>
+</div>
+
+@code {
+    [Inject] private DialogService DialogService { get; set; } = null!;
+
+    /// <summary>La fila real: identidad del panel. En el alta es el mismo objeto que Borrador.</summary>
+    [Parameter, EditorRequired] public FormulacionViewModel Item { get; set; } = null!;
+    /// <summary>Donde escriben los campos: el buffer en edición; la fila nueva en el alta.</summary>
+    [Parameter, EditorRequired] public FormulacionViewModel Borrador { get; set; } = null!;
+    [Parameter] public bool EsAlta { get; set; }
+    /// <summary>Los tres años del ciclo, para los títulos de los montos.</summary>
+    [Parameter, EditorRequired] public int[] Anios { get; set; } = [];
+    /// <summary>Sólo el administrador ve y edita el PPI y el techo.</summary>
+    [Parameter] public bool EsAdmin { get; set; }
+    /// <summary>Obras disponibles para el alta (sin formulación en el ciclo).</summary>
+    [Parameter] public IReadOnlyList<OpcionLookup> Obras { get; set; } = [];
+    [Parameter] public IReadOnlyList<OpcionLookup> Unidades { get; set; } = [];
+    [Parameter] public IReadOnlyList<OpcionLookup> Prioridades { get; set; } = [];
+    /// <summary>Guardado delegado a la página: true = cerrar; false = queda abierto con lo tipeado.</summary>
+    [Parameter, EditorRequired] public Func<Task<bool>> GuardarAsync { get; set; } = null!;
+
+    private bool _guardando;
+
+    private bool HayAlgunMonto => Borrador.Montos.Any(m => m is not null);
+
+    private string? Titulo => EsAlta ? Obras.FirstOrDefault(o => o.Id == Borrador.ObraId)?.Nombre : Item.Obra;
+
+    // En el alta la fila nueva todavía no tiene los datos de la obra: sólo se muestra el total.
+    private IReadOnlyList<PanelIdentidad.Dato> Datos => EsAlta
+        ? [new("Total del ciclo", Borrador.TotalMonto.ToString("N2"))]
+        :
+        [
+            new("Área", Item.Area),
+            new("Empresa", Item.Empresa),
+            new("Contrata", Item.Contrata),
+            new("Barrio", Item.Barrio),
+            new("Total del ciclo", Item.TotalMonto.ToString("N2")),
+        ];
+
+    private async Task Guardar()
+    {
+        _guardando = true;
+        try
+        {
+            if (await GuardarAsync()) DialogService.Close(true);
+        }
+        finally
+        {
+            _guardando = false;
+        }
+    }
+}

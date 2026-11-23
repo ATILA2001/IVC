@@ -46,6 +46,8 @@ else
     [Parameter] public string Vista { get; set; } = string.Empty;
     [Parameter] public int? EntidadId { get; set; }
     [Parameter] public string ClaveNegocio { get; set; } = string.Empty;
+    /// <summary>Campos (nombre visible) que no se muestran, por ejemplo los que la página oculta al usuario.</summary>
+    [Parameter] public IReadOnlyCollection<string>? CamposOcultos { get; set; }
 
     private bool _cargando = true;
     private bool _fallo;
@@ -58,6 +60,8 @@ else
         try
         {
             var filas = await Auditoria.GetHistorialAsync(Vista, EntidadId, ClaveNegocio);
+            if (CamposOcultos is { Count: > 0 } ocultos)
+                filas = filas.Where(f => f.Campo is null || !ocultos.Contains(f.Campo, StringComparer.OrdinalIgnoreCase)).ToList();
 
             // Un grupo por guardado (lote), del más reciente al más viejo.
             _grupos = filas

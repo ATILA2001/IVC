@@ -153,6 +153,12 @@ public abstract class GridPageBase<TItem> : PermissionPageBase, IDisposable wher
     protected abstract string ExportNombreHoja { get; }
     protected abstract string ExportNombreArchivo { get; }
 
+    /// <summary>
+    /// Títulos de export que dependen de datos (clave: nombre de la propiedad), por encima
+    /// del [Display] de la fila. Null: sólo los atributos.
+    /// </summary>
+    protected virtual IReadOnlyDictionary<string, string>? TitulosExport => null;
+
     protected abstract Task<List<TItem>> ObtenerDatosAsync();
 
     /// <summary>
@@ -964,7 +970,7 @@ public abstract class GridPageBase<TItem> : PermissionPageBase, IDisposable wher
             // recalcula desde los datos; sin esto el Excel saldría con una sola página.
             if (_grid is not null) await _grid.Reload();
             var filas = _grid?.View?.ToList() ?? _items;
-            await DescargarXlsxAsync(filas, ExportNombreHoja, ExportNombreArchivo);
+            await DescargarXlsxAsync(filas, ExportNombreHoja, ExportNombreArchivo, TitulosExport);
         }
         catch (Exception ex)
         {
@@ -981,12 +987,12 @@ public abstract class GridPageBase<TItem> : PermissionPageBase, IDisposable wher
     /// por los exports propios de una página (la lista de control de Control OP), así
     /// la receta de descarga vive en un solo lugar.
     /// </summary>
-    protected async Task DescargarXlsxAsync<T>(IReadOnlyList<T> filas, string hoja, string archivo)
+    protected async Task DescargarXlsxAsync<T>(IReadOnlyList<T> filas, string hoja, string archivo, IReadOnlyDictionary<string, string>? titulos = null)
     {
         // La generación es CPU puro y sincrónica: en un hilo del pool no bloquea el
         // circuito, y al ser el primer await que suspende de verdad, deja que Blazor
         // pinte el estado "Exportando..." del botón antes de ponerse a trabajar.
-        var bytes = await Task.Run(() => ExportService.ExportToXlsx(filas, hoja));
+        var bytes = await Task.Run(() => ExportService.ExportToXlsx(filas, hoja, titulos));
 
         // El archivo viaja como stream (Blazor lo trocea en chunks por SignalR):
         // sin base64 no hay +33% en la red, ni string gigante en el heap, ni un
