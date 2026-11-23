@@ -1,6 +1,7 @@
 @page "/Account/Login"
 @attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 
+@using IVC.Security
 @inject NavigationManager Navigation
 @inject IConfiguration Configuration
 
@@ -15,12 +16,13 @@
         // el returnUrl contra sus AllowedReturnUrls (igual que SAI).
         var clientId = Configuration["AuthWeb:ClientId"] ?? string.Empty;
 
-        // El middleware de la cookie arma un ReturnUrl relativo (ej: "/pagos"), pero
+        // El middleware de la cookie arma un ReturnUrl relativo (ej: "/obras"), pero
         // IsReturnUrlAllowed de Auth.Web compara por mismo origen y necesita una URI
-        // absoluta: sin esto descarta el destino y el login vuelve al inicio.
-        var returnUrl = string.IsNullOrWhiteSpace(ReturnUrl)
-            ? Navigation.BaseUri
-            : Navigation.ToAbsoluteUri(ReturnUrl).ToString();
+        // absoluta: sin esto descarta el destino y el login vuelve al inicio. Sólo se
+        // reenvían rutas de esta app: otro host o esquema vuelve al inicio.
+        var returnUrl = ReturnUrls.EsLocal(ReturnUrl)
+            ? Navigation.ToAbsoluteUri(ReturnUrl!).ToString()
+            : Navigation.BaseUri;
 
         Navigation.NavigateTo(
             $"{authWebBase}/Account/Login" +
